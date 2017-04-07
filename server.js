@@ -28,6 +28,11 @@
 
   const app = express();
   app.use(compression());
+  app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+  });
   app.set('json spaces', 2);
 
   const server = app.listen(argv.port, argv.public ? undefined : 'localhost', function() {
@@ -41,7 +46,7 @@
   const EAST_ROOT_REGION = [ 0, -Math.PI / 2, Math.PI / 2, Math.PI / 2, 0, RADIUS ];
   const ROOT_REGIONS = [ WEST_ROOT_REGION, EAST_ROOT_REGION ];
   const ROOT_ERROR = 10000;
-  const GENERATION_DEPTH = 1;
+  const GENERATION_DEPTH = 4;
 
   function getDepth(index) {
     var depth = 0;
@@ -84,10 +89,55 @@
     return node;
   }
 
-  function GenerateBoundingRegion(hemisphere, index) {
-    let region = ROOT_REGIONS[hemisphere].slice();
-    return region;
-  }
+  const GenerateBoundingRegion = (function() {
+    let indices = [];
+
+    let modifiers = [
+      function(region) {
+        region[0] = region[0];
+        region[1] = region[1];
+        region[2] = (region[0] + region[2]) / 2;
+        region[3] = (region[1] + region[3]) / 2;
+      },
+      function(region) {
+        region[0] = (region[0] + region[2]) / 2;
+        region[1] = region[1];
+        region[2] = region[2];
+        region[3] = (region[1] + region[3]) / 2;
+      },
+      function(region) {
+        region[0] = region[0];
+        region[1] = (region[1] + region[3]) / 2;
+        region[2] = (region[0] + region[2]) / 2;
+        region[3] = region[3];
+      },
+      function(region) {
+        region[0] = (region[0] + region[2]) / 2;
+        region[1] = (region[1] + region[3]) / 2;
+        region[2] = region[2];
+        region[3] = region[3];
+      },
+    ];
+
+    return function(hemisphere, index) {
+      let region = ROOT_REGIONS[hemisphere].slice();
+
+      indices.length = 0;
+      while (index > 0) {
+        let next = Math.floor(index / 4);
+        let childIndex = (index / 4 - next) * 4;
+        indices.push(childIndex);
+        index = next;
+      }
+
+      for(let i = indices.length - 1; i >= 0; --i) {
+        modifiers[indices[i]](region);
+      }
+
+      return region;
+    }
+  })();
+  
 
   app.get('/tileset.json', function(req, res) {
     res.json({
@@ -113,7 +163,7 @@
     const index = req.params.index;
     const hemisphere = req.params.hemisphere;
 
-    var node = GenerateNode(hemisphere, index, 0);
+    var node = GenerateNode(hemisphere, parseInt(index), 0);
     res.json({
       asset: {
         version: '0.0'
