@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "start": "nodemon server.js",
+    "serve": "node server.js"
+  },
+  "dependencies": {
+    "compression": "^1.6.2",
+    "express": "^4.15.2",
+    "yargs": "^7.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}
