@@ -28,6 +28,7 @@ TreeProvider.prototype.getRoot = function() {
     boundingVolume: {
       sphere: [ 0, 0, 0, this.worldRadius ],
     },
+    geometricError: 100000000,
     // geometricError: this.rootError,
     refine: 'replace',
     children: [ 
@@ -76,6 +77,8 @@ TreeProvider.prototype.generateNode = function(hemisphere, index, generationDept
   return node;
 }
 
+// west, south, east, north
+
 var modifiers = [
   // south west
   function(region) {
@@ -91,18 +94,18 @@ var modifiers = [
     region[2] = region[2];
     region[3] = (region[1] + region[3]) / 2;
   },
-  // north west
-  function(region) {
-    region[0] = region[0];
-    region[1] = (region[1] + region[3]) / 2;
-    region[2] = (region[0] + region[2]) / 2;
-    region[3] = region[3];
-  },
   // north east
   function(region) {
     region[0] = (region[0] + region[2]) / 2;
     region[1] = (region[1] + region[3]) / 2;
     region[2] = region[2];
+    region[3] = region[3];
+  },
+  // north west
+  function(region) {
+    region[0] = region[0];
+    region[1] = (region[1] + region[3]) / 2;
+    region[2] = (region[0] + region[2]) / 2;
     region[3] = region[3];
   },
 ];
@@ -114,9 +117,9 @@ TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
 
   indices.length = 0;
   while (index > 0) {
-    let next = Math.floor(index / 4);
-    let childIndex = (index / 4 - next) * 4;
-    indices.push(childIndex);
+    let next = Math.floor((index - 1) / 4);
+    let childIndex = index - next * 4;
+    indices.push(childIndex - 1);
     index = next;
   }
 
