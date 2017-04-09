@@ -25,6 +25,7 @@
 
   const express = require('express');
   const compression = require('compression');
+  const path = require('path');
 
   const app = express();
   app.use(compression());
@@ -33,6 +34,7 @@
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
   });
+  app.use('/shaders', express.static(path.join(__dirname, 'shaders')));
   app.set('json spaces', 2);
 
   const server = app.listen(argv.port, argv.public ? undefined : 'localhost', function() {
@@ -40,7 +42,7 @@
   });
   
   const options = {
-    generationDepth: 5,
+    generationDepth: 6,
     rootError: 2500000,
     errorFactor: 0.5,
     worldRadius: 6378137,

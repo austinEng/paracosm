@@ -70,10 +70,10 @@ TerrainProvider.prototype.generateTerrain = function(hemisphere, index) {
   setNormal(region[2], region[3], 0, new Float32Array(normals.buffer, componentBytes*(corner++), 3));
   if (!northPole) setNormal(region[0], region[3], 0, new Float32Array(normals.buffer, componentBytes*(corner++), 3));
 
-  var minPosition = positions.slice(0, 3);
-  var maxPosition = positions.slice(0, 3);
+  var minPosition = [positions[0], positions[1], positions[2]];
+  var maxPosition = [positions[0], positions[1], positions[2]];
 
-  let padding = 10;
+  let padding = 0;
   for (let i = 0; i < vertexCount; ++i) {
     minPosition[0] = Math.min(minPosition[0], positions[3 * i + 0] - padding);
     minPosition[1] = Math.min(minPosition[1], positions[3 * i + 1] - padding);
@@ -105,7 +105,7 @@ TerrainProvider.prototype.generateTerrain = function(hemisphere, index) {
       accessor_nor: {
         bufferView: "bufferViews_attr",
         byteOffset: 0,
-        byteStride: componentBytes,
+        byteStride: 0,
         componentType: 5126, // FLOAT
         count: vertexCount,
         max: [1, 1, 1],
@@ -115,7 +115,7 @@ TerrainProvider.prototype.generateTerrain = function(hemisphere, index) {
       accessor_pos: {
         bufferView: "bufferViews_attr",
         byteOffset: componentBytes * vertexCount,
-        byteStride: componentBytes,
+        byteStride: 0,
         componentType: 5126, // FLOAT
         count: vertexCount,
         max: minPosition,
@@ -149,7 +149,7 @@ TerrainProvider.prototype.generateTerrain = function(hemisphere, index) {
       Terrain: {
         byteLength: buffer.byteLength,
         type: "arraybuffer",
-        uri: `data:,${buffer.toString('binary')}`
+        uri: `data:application/octet-stream;base64,${buffer.toString('base64')}`
       }
     },
     materials: {
@@ -261,72 +261,28 @@ TerrainProvider.prototype.generateTerrain = function(hemisphere, index) {
     }
   };
 
-  const pipelineOptions = {
-    basePath: __dirname,
-    preserve: true
-  };
-
-  // gltf = addPipelineExtras(gltf);
-
   addCesiumRTC(gltf, {
     longitude: region[0],
     latitude: region[1],
     height: 0
   });
 
-  // return processJSON(gltf, pipelineOptions)
-  //   .then(function(optimizedGltf) {
-  //     var gltfWithExtras = addPipelineExtras(optimizedGltf);
-  //     return loadGltfUris(gltfWithExtras);
-  //   })
-  //   .then(function(pipelineGltf) {
-  //     var binaryGltf = getBinaryGltf(pipelineGltf, true, false);
-  //     var glbBuffer = binaryGltf.glb;
-  //     var b3dmBuffer = glbToB3dm(glbBuffer);
-  //     return b3dmBuffer;
-  //   })
-    // .catch(function(error) {
-      // console.log(gltf);
-      // console.log(gltf.buffers.Terrain.extras._pipeline.source.length);
-      // console.log(indices);
-      // console.log(normals);
-      // console.log(positions);
-      // throw error;
-      // console.log(hemisphere, index);
-      // throw error;
-      // return null;
-    // });
+  const pipelineOptions = {
+    basePath: __dirname,
+    optimizeForCesium: true
+  };
 
-  return loadGltfUris(addPipelineExtras(gltf), pipelineOptions).then(function(gltf) {
-    var binaryGltf = getBinaryGltf(gltf, true, false);
-    var glbBuffer = binaryGltf.glb;
-    var b3dmBuffer = glbToB3dm(glbBuffer);
-    return b3dmBuffer;
-    // var b3dmHeader = b3dmBuffer.slice(0, 24);
-    // var length = b3dmHeader.length + glbBuffer.length;
-    // return {
-    //   length
-    // }
-    // return Buffer.concat([b3dmHeader, glbBuffer], length);
-
-    // var header = Buffer.alloc(24);
-    // header.write('b3dm', 0);
-    // header.writeUInt32LE(1, 4); // version
-    // header.writeUInt32LE(glbBuffer.length + 24, 8);
-    // return Buffer.concat([header, glbBuffer]);
-
-    // var indices = new Int16Array(binaryGltf.body, 0, 6);
-
-    // return {
-    //   header: String.fromCharCode.apply(null, binaryGltf.header),
-    //   headerLength: binaryGltf.header.length,
-    //   scene: JSON.parse(String.fromCharCode.apply(null, binaryGltf.scene)).bufferViews,
-    //   body: String.fromCharCode.apply(null, binaryGltf.body),
-    //   glb: String.fromCharCode.apply(null, binaryGltf.glb),
-    //   b3dm: String.fromCharCode.apply(null, b3dmBuffer)
-    // }
-    // return b3dmBuffer;
-  });
+  return processJSON(gltf, pipelineOptions)
+    .then(function(optimizedGltf) {
+      var gltfWithExtras = addPipelineExtras(optimizedGltf);
+      return loadGltfUris(gltfWithExtras);
+    })
+    .then(function(pipelineGltf) {
+      var binaryGltf = getBinaryGltf(pipelineGltf, true, false);
+      var glbBuffer = binaryGltf.glb;
+      var b3dmBuffer = glbToB3dm(glbBuffer);
+      return b3dmBuffer;
+    });
 }
 
 module.exports = TerrainProvider;
