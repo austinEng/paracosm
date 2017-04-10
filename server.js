@@ -26,6 +26,7 @@
   const express = require('express');
   const compression = require('compression');
   const path = require('path');
+  const logger = require('morgan');
 
   const app = express();
   app.use(compression());
@@ -34,6 +35,7 @@
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
   });
+  app.use(logger('tiny'));
   app.use('/shaders', express.static(path.join(__dirname, 'shaders')));
   app.set('json spaces', 2);
 
@@ -42,7 +44,7 @@
   });
   
   const options = {
-    generationDepth: 6,
+    generationDepth: 3,
     rootError: 2500000,
     errorFactor: 0.5,
     worldRadius: 6378137,

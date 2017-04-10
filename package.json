@@ -9,6 +9,7 @@
     "compression": "^1.6.2",
     "express": "^4.15.2",
     "gltf-pipeline": "0.1.0-alpha11",
+    "morgan": "^1.8.1",
     "yargs": "^7.0.2"
   },
   "devDependencies": {
