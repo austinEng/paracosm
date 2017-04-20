@@ -36,7 +36,6 @@
     next();
   });
   app.use(logger('tiny'));
-  app.use('/shaders', express.static(path.join(__dirname, 'shaders')));
   app.set('json spaces', 2);
 
   const server = app.listen(argv.port, argv.public ? undefined : 'localhost', function() {
@@ -90,5 +89,8 @@
       res.send(terrain);
     });
   });
+
+  app.use('/Cesium', express.static(path.join(__dirname, 'cesium/Build/Cesium')));
+  app.use('/', express.static(__dirname));
 
 })();

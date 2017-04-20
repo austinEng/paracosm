@@ -1,7 +1,9 @@
 {
   "scripts": {
-    "start": "nodemon server.js",
-    "serve": "node server.js"
+    "start": "nodemon server.js --ignore example/",
+    "serve": "node server.js",
+    "postinstall": "cd cesium && npm install",
+    "build": "cd cesium && npm run release"
   },
   "dependencies": {
     "3d-tiles-tools": "^0.1.2",
