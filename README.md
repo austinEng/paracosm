@@ -6,4 +6,4 @@
 3. `npm install`
 4. `npm run build`
 5. `npm start`
-6. Navigate to `http://localhost:3000`
+6. Navigate to `http://localhost:3000/demo`
