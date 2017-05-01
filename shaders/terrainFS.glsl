@@ -10,5 +10,8 @@ void main(void) {
     diffuse.xyz *= max(dot(normal,vec3(0.,0.,1.)), 0.);
     color.xyz += diffuse.xyz;
     color = vec4(color.rgb * diffuse.a, diffuse.a);
+    
     gl_FragColor = color;
+    
+    //gl_FragColor = vec4(v_normal, 0.0);
 }
