@@ -12,6 +12,137 @@ const addCesiumRTC = gltfPipeline.addCesiumRTC;
 //TERRAIN GENERATION STUFF
 const THREE = require('three');
 
+//NOISE GENERATION
+function getFractionalPart(a)
+{
+    if(a < 0)
+        {
+            return -(Math.abs(a) - Math.floor(Math.abs(a)));
+        }
+    else if(a > 0)
+        {
+            return a - Math.floor(a);
+        }
+    else if(a == 0)
+        return 0;
+    
+}
+
+function getIntigerPart(a)
+{
+    if(a < 0)
+        {
+            return -(Math.floor(Math.abs(a)));
+        }
+    else if(a > 0)
+        {
+            return Math.floor(a);
+        }
+    else if(a == 0)
+        return 0;
+}
+
+function dotProduct(x1, y1, z1, x2, y2, z2)
+{
+    var dotproduct = ((x1 * x2) + (y1 * y2) + (z1 * z2));
+    return dotproduct;
+}
+
+function Noise3D(x, y, z)
+{
+    var ft = Math.sin(dotProduct(x,y,z, 12.989, 78.233, 157)) * 43758.5453;
+    
+    return getFractionalPart(ft);
+}
+
+
+function SmoothNoise3D(X, Y, Z)
+{
+    var far = (Noise3D(X-1, Y+1, Z+1) + Noise3D(X+1, Y+1, Z+1) + Noise3D(X-1, Y+1, Z-1) + Noise3D(X+1, Y+1, Z-1) + Noise3D(X-1, Y-1, Z+1) + Noise3D(X+1, Y-1, Z+1) + Noise3D(X-1, Y-1, Z-1) + Noise3D(X+1, Y-1, Z-1)) / 64.0;//80.0;
+
+    var medium = (Noise3D(X-1, Y+1, Z) + Noise3D(X+1, Y+1, Z) + Noise3D(X-1, Y-1, Z) + Noise3D(X+1, Y-1, Z) + Noise3D(X, Y+1, Z+1) + Noise3D(X, Y+1, Z-1) + Noise3D(X, Y-1, Z+1) + Noise3D(X, Y-1, Z-1) + Noise3D(X-1, Y, Z+1) + Noise3D(X+1, Y, Z+1) + Noise3D(X-1, Y, Z-1) + Noise3D(X+1, Y, Z-1)) / 32.0;//60.0;
+
+    var closest = (Noise3D(X-1, Y, Z) + Noise3D(X+1, Y, Z) + Noise3D(X, Y-1, Z) + Noise3D(X, Y+1, Z) + Noise3D(X, Y, Z+1) + Noise3D(X, Y, Z-1)) / 16.0;//19.999;
+    
+    var self = Noise3D(X, Y, Z) / 8.0;
+    
+    
+    return self + closest + medium + far;  
+}
+
+
+function Interpolate(a, b, x)
+{
+    var t = (1.0 - Math.cos(x * 3.14159)) * 0.5;
+    
+    return a * (1.0 - t) + b * t;
+}
+
+function InterpolateNoise3D(x, y, z, p)
+{
+    var int_X = getIntigerPart(x);
+    var int_Y = getIntigerPart(y);
+    var int_Z = getIntigerPart(z);
+    
+    var float_X = getFractionalPart(x);
+    var float_Y = getFractionalPart(y);
+    var float_Z = getFractionalPart(z);
+    
+    //8 Points on the lattice sorrunding the given point
+    var p1 = SmoothNoise3D(int_X, int_Y, int_Z);
+    var p2 = SmoothNoise3D(int_X + 1, int_Y, int_Z);
+    var p3 = SmoothNoise3D(int_X, int_Y + 1, int_Z);
+    var p4 = SmoothNoise3D(int_X + 1, int_Y + 1, int_Z);
+    var p5 = SmoothNoise3D(int_X, int_Y, int_Z + 1);
+    var p6 = SmoothNoise3D(int_X + 1, int_Y, int_Z + 1);
+    var p7 = SmoothNoise3D(int_X, int_Y + 1, int_Z + 1);
+    var p8 = SmoothNoise3D(int_X + 1, int_Y + 1, int_Z + 1);
+    
+    var i1 = Interpolate(p1, p2, float_X);
+    var i2 = Interpolate(p3, p4, float_X);
+    var i3 = Interpolate(p5, p6, float_X);
+    var i4 = Interpolate(p7, p8, float_X);
+    
+    var n1 = Interpolate(i1, i2, float_Y);
+    var n2 = Interpolate(i3, i4, float_Y);
+    
+    var t1 = Interpolate(n1, n2, float_Z);
+    
+    return t1;
+}
+
+
+function Generate_Noise3D(posx, posy, posz, persistance, octaves)
+{
+    var total = 0.0;
+    var p = 0.25;//persistance;
+    var n = octaves;
+
+    //int i = 0;
+    for(var i=0; i < octaves; i++) 
+    {
+    var frequency = Math.pow(1/p, i);//Math.pow(2, i);/// 120000000;//12000000.0;
+    var amplitude = Math.pow(p, i*i);
+    
+    total = total + InterpolateNoise3D((posx)* frequency * 100, (posy) * frequency * 100, (posz) * frequency * 100, amplitude) * amplitude;
+    
+    }
+    
+    return total;
+}
+
+
+//NOISE GENERATION OVER
+
+//GETTING THE TREE DEPTH
+function getDepth(index) {
+  var depth = 0;
+  while (index > 0) {
+    ++depth;
+    index = Math.ceil(index / 4) - 1;
+  }
+  return depth; //depth / 100
+}
 
 //SETTING UP THE POS AND NORMAL VECTORS FROM RADIANS TO CARTESIAN COORDINATES
 function TerrainProvider(treeProvider) {
@@ -155,6 +286,15 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
                 normals[3*p+1] = CartesianPos.y;
                 normals[3*p+2] = CartesianPos.z;
                 
+                //OFFSET THE POSITIONS OF THE VERTICES ALONG THE NORMAL USING NOISE
+                var tree_depth = getDepth(index);
+                var noise_val = Generate_Noise3D(positions[3*p+0], positions[3*p+1], positions[3*p+2], 0.9, tree_depth);
+                
+                noise_val = 0.5 + 0.5 * noise_val;
+                positions[3*p+0] = positions[3*p+0] + normals[3*p+0] * noise_val * 2000000;
+                positions[3*p+1] = positions[3*p+1] + normals[3*p+1] * noise_val * 2000000;
+                positions[3*p+2] = positions[3*p+2] + normals[3*p+2] * noise_val * 2000000;
+                
                 p+=1;
             }
         }
@@ -253,8 +393,6 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
         
     }
 
-    
-    
 //        corner = 0;
 //        var sw = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
 //        if (!southPole) var se = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
@@ -275,463 +413,12 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
 //    //FURTHURE SUBDIVISION OF THE TILE
 //    //position array -> 3 * [sw, (!southpole)se, ne, (!northpole)nw]
 //    // west, south, east, north, bottom, top <- region
-//
-//    if (!pole) {
-//        
-//        //sw -> se row 0
-//        pos_arr = [];
-//       
-//        var row_0 = [];
-//        pos_arr[0] = new THREE.Vector3(positions[0],positions[1],positions[2]);
-//        pos_arr[8] = new THREE.Vector3(positions[3],positions[4],positions[5]);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//
-//        var count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_0[3 * i + 0] = pos_arr[count].x;
-//            row_0[3 * i + 1] = pos_arr[count].y;
-//            row_0[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        row_0[0] = pos_arr[0].x;
-////        row_0[1] = pos_arr[0].y;
-////        row_0[2] = pos_arr[0].z;
-////        row_0[3] = pos_arr[4].x;
-////        row_0[4] = pos_arr[4].y;
-////        row_0[5] = pos_arr[4].z;
-////        row_0[6] = pos_arr[8].x;
-////        row_0[7] = pos_arr[8].y;
-////        row_0[8] = pos_arr[8].z;
-//        
-//        
-////        console.log("row_0");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_0 vertice pos");
-////            console.log(row_0[3 * pr + 0]);
-////            console.log(row_0[3 * pr + 1]);
-////            console.log(row_0[3 * pr + 2]);
-////            
-////            console.log("row_0 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//
-//        //nw -> ne row 8
-//        pos_arr = [];
-//        
-//        var row_8 = [];
-//        pos_arr[0] = new THREE.Vector3(positions[9],positions[10],positions[11]);
-//        pos_arr[8] = new THREE.Vector3(positions[6],positions[7],positions[8]);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_8[3 * i + 0] = pos_arr[count].x;
-//            row_8[3 * i + 1] = pos_arr[count].y;
-//            row_8[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        row_8[0] = pos_arr[0].x;
-////        row_8[1] = pos_arr[0].y;
-////        row_8[2] = pos_arr[0].z;
-////        row_8[3] = pos_arr[4].x;
-////        row_8[4] = pos_arr[4].y;
-////        row_8[5] = pos_arr[4].z;
-////        row_8[6] = pos_arr[8].x;
-////        row_8[7] = pos_arr[8].y;
-////        row_8[8] = pos_arr[8].z;
-//        
-//        
-////        console.log("row_8");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_8 vertice pos");
-////            console.log(row_8[3 * pr + 0]);
-////            console.log(row_8[3 * pr + 1]);
-////            console.log(row_8[3 * pr + 2]);
-////            
-////            console.log("row_8 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //w -> e row 4
-//        pos_arr = [];
-//        
-//        var row_4 = [];
-//        pos_arr[0] = new THREE.Vector3((positions[0] + positions[9]) / 2, 
-//                                       (positions[1] + positions[10]) / 2, 
-//                                       (positions[2] + positions[11]) / 2);
-//        pos_arr[8] = new THREE.Vector3((positions[3] + positions[6]) / 2, 
-//                                       (positions[4] + positions[7]) / 2, 
-//                                       (positions[5] + positions[8]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_4[3 * i + 0] = pos_arr[count].x;
-//            row_4[3 * i + 1] = pos_arr[count].y;
-//            row_4[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        row_4[0] = pos_arr[0].x;
-////        row_4[1] = pos_arr[0].y;
-////        row_4[2] = pos_arr[0].z;
-////        row_4[3] = pos_arr[4].x;
-////        row_4[4] = pos_arr[4].y;
-////        row_4[5] = pos_arr[4].z;
-////        row_4[6] = pos_arr[8].x;
-////        row_4[7] = pos_arr[8].y;
-////        row_4[8] = pos_arr[8].z;
-//        
-////        console.log("row_4");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_4 vertice pos");
-////            console.log(row_4[3 * pr + 0]);
-////            console.log(row_4[3 * pr + 1]);
-////            console.log(row_4[3 * pr + 2]);
-////            
-////            console.log("row_4 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //sw -> se row 2
-//        pos_arr = [];
-//        
-//        var row_2 = [];
-//        pos_arr[0] = new THREE.Vector3((row_4[0] + positions[0]) / 2, (row_4[1] + positions[1]) / 2, (row_4[2] + positions[2]) / 2);
-//        pos_arr[8] = new THREE.Vector3((row_4[24] + positions[3]) / 2, (row_4[25] + positions[4]) / 2, (row_4[26] + positions[5]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_2[3 * i + 0] = pos_arr[count].x;
-//            row_2[3 * i + 1] = pos_arr[count].y;
-//            row_2[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        console.log("row_2");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_2 vertice pos");
-////            console.log(row_2[3 * pr + 0]);
-////            console.log(row_2[3 * pr + 1]);
-////            console.log(row_2[3 * pr + 2]);
-////            
-////            console.log("row_2 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //sw -> se row 1
-//        pos_arr = [];
-//        
-//        var row_1 = [];
-//        pos_arr[0] = new THREE.Vector3((row_2[0] + positions[0]) / 2, (row_2[1] + positions[1]) / 2, (row_2[2] + positions[2]) / 2);
-//        pos_arr[8] = new THREE.Vector3((row_2[24] + positions[3]) / 2, (row_2[25] + positions[4]) / 2, (row_2[26] + positions[5]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_1[3 * i + 0] = pos_arr[count].x;
-//            row_1[3 * i + 1] = pos_arr[count].y;
-//            row_1[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        console.log("row_1");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_1 vertice pos");
-////            console.log(row_1[3 * pr + 0]);
-////            console.log(row_1[3 * pr + 1]);
-////            console.log(row_1[3 * pr + 2]);
-////            
-////            console.log("row_1 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //sw -> se row 3
-//        pos_arr = [];
-//        
-//        var row_3 = [];
-//        pos_arr[0] = new THREE.Vector3((row_2[0] + row_4[0]) / 2, (row_2[1] + row_4[1]) / 2, (row_2[2] + row_4[2]) / 2);
-//        pos_arr[8] = new THREE.Vector3((row_2[24] + row_4[24]) / 2, (row_2[25] + row_4[25]) / 2, (row_2[26] + row_4[26]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_3[3 * i + 0] = pos_arr[count].x;
-//            row_3[3 * i + 1] = pos_arr[count].y;
-//            row_3[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        console.log("row_3");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_3 vertice pos");
-////            console.log(row_3[3 * pr + 0]);
-////            console.log(row_3[3 * pr + 1]);
-////            console.log(row_3[3 * pr + 2]);
-////            
-////            console.log("row_3 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //nw -> ne row 6
-//        pos_arr = [];
-//       
-//        var row_6 = [];
-//        pos_arr[0] = new THREE.Vector3((positions[9] + row_4[0]) / 2, (positions[10] + row_4[1]) / 2, (positions[11] + row_4[2]) / 2);
-//        pos_arr[8] = new THREE.Vector3((positions[6] + row_4[24]) / 2, (positions[7] + row_4[25]) / 2, (positions[8] + row_4[26]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_6[3 * i + 0] = pos_arr[count].x;
-//            row_6[3 * i + 1] = pos_arr[count].y;
-//            row_6[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        console.log("row_6");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_6 vertice pos");
-////            console.log(row_6[3 * pr + 0]);
-////            console.log(row_6[3 * pr + 1]);
-////            console.log(row_6[3 * pr + 2]);
-////            
-////            console.log("row_6 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //nw -> ne row 5
-//        pos_arr = [];
-//        
-//        var row_5 = [];
-//        pos_arr[0] = new THREE.Vector3((row_6[0] + row_4[0]) / 2, (row_6[1] + row_4[1]) / 2, (row_6[2] + row_4[2]) / 2);
-//        pos_arr[8] = new THREE.Vector3((row_6[24] + row_4[24]) / 2, (row_6[25] + row_4[25]) / 2, (row_6[26] + row_4[26]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_5[3 * i + 0] = pos_arr[count].x;
-//            row_5[3 * i + 1] = pos_arr[count].y;
-//            row_5[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//        
-////        console.log("row_5");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_5 vertice pos");
-////            console.log(row_5[3 * pr + 0]);
-////            console.log(row_5[3 * pr + 1]);
-////            console.log(row_5[3 * pr + 2]);
-////            
-////            console.log("row_5 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //nw -> ne row 7
-//        pos_arr = [];
-//        
-//        var row_7 = [];
-//        pos_arr[0] = new THREE.Vector3((row_6[0] + positions[9]) / 2, (row_6[1] + positions[10]) / 2, (row_6[2] + positions[11]) / 2);
-//        pos_arr[8] = new THREE.Vector3((row_6[24] + positions[6]) / 2, (row_6[25] + positions[7]) / 2, (row_6[26] + positions[8]) / 2);
-//        
-//        getRowSubdivPos(0, pos_arr[0], pos_arr[8], 0, 8);
-//        
-//        count = 0;
-//        for(var i = 0; i < 9 ; i++)
-//        {
-//            row_7[3 * i + 0] = pos_arr[count].x;
-//            row_7[3 * i + 1] = pos_arr[count].y;
-//            row_7[3 * i + 2] = pos_arr[count].z;
-//            count++;
-//        }
-//
-////        console.log("row_7");
-////        for(var pr = 0 ; pr < 9; pr++)
-////        {
-////            console.log("row_7 vertice pos");
-////            console.log(row_7[3 * pr + 0]);
-////            console.log(row_7[3 * pr + 1]);
-////            console.log(row_7[3 * pr + 2]);
-////        
-////            console.log("row_7 pos_arr vertice pos");
-////            console.log(pos_arr[pr].x);
-////            console.log(pos_arr[pr].y);
-////            console.log(pos_arr[pr].z);
-////            
-////        }
-//        
-//        //filling the positions in their respective arrays
-////        count = 0;
-////        for(var i = 0;i < 9; i++)
-////            {
-////                positions[count] = row_0[i];
-////                count++;
-////            }
-////        
-////        for(var i = 0;i < 9; i++)
-////            {
-////                positions[count] = row_4[i];
-////                count++;
-////            }
-////        
-////        for(var i = 0;i < 9; i++)
-////            {
-////                positions[count] = row_8[i];
-////                count++;
-////            }
-//        
-//
-//        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_0[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_0 " + positions.length);
-////        console.log("row_0 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_1[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_1 " + positions.length);
-////        console.log("row_1 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_2[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_2 " + positions.length);
-////        console.log("row_2 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_3[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_3 " + positions.length);
-////        console.log("row_3 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_4[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_4 " + positions.length);
-////        console.log("row_4 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_5[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_5 " + positions.length);
-////        console.log("row_5 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_6[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_6 " + positions.length);
-////        console.log("row_6 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_7[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_7 " + positions.length);
-////        console.log("row_7 count value " + count);
-//        
-////        count = 0;
-//        for(var i = 0; i < 27; i++)
-//        {
-//            positions[count] = row_8[i];
-//            count++;
-//        }
-////        console.log("size of positions after row_8 " + positions.length);
-////        console.log("row_8 count value " + count);
-//        
-//        //filling the normals in their respective arrays
-//        for(var i = 0 ; i < 81 ; i++)//81
-//        {
-//            /*var nor = */setcartesiannormal(positions[3 * i + 0], positions[3 * i + 1], positions[3 * i + 2]);
-//            normals[3 * i + 0] = normal[0];
-//            normals[3 * i + 1] = normal[1];
-//            normals[3 * i + 2] = normal[2];
-//
-//        } 
-//        
-//    }
+
 
     console.log("size of normals: " + normals.length);
     console.log("size of positions: " + positions.length);
     console.log("no of indices: " + indexCount);
     console.log("nor of vertex: " + vertexCount);
-    
-//    for(var i = 0 ; i < positions.length; ++i)
-//        console.log("position: " + i + " "+ positions[i]);
 
     //SETTING THE MIN AND MAX BOUNDS
     var minPosition = [positions[0], positions[1], positions[2]];
@@ -778,15 +465,6 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
         }
    
         console.log("indices length: " + indices.length);
-//        indices.set([0,1,4,0,4,3,1,2,5,1,5,4,4,5,8,4,8,7,3,4,7,3,7,6]);
-
-//        indices.set([0,1,4,0,4,3,1,2,5,1,5,4,4,5,8,4,8,7,3,7,6,3,4,7]);
-//        indices.set([3,4,7,3,7,6,4,5,8,4,8,7,0,1,4,0,4,3,1,2,5,1,5,4]);
-//        indices.set([0,1,4,0,4,3,1,2,5,1,5,4,3,4,7,3,7,6,4,5,8,4,8,7]);
-//        indices.set([0,1,4,0,4,3,1,2,8,1,8,7,3,4,7,3,7,6]);
-//        indices.set([0,4,3]);
-//        indices.set([0,1,4,0,4,3]);
-//        indices.set([3,4,7]);
     }
 
     //END PROCEDURAL TERRAIN STUFF

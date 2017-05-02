@@ -186,7 +186,7 @@ function SmoothNoise3D(X, Y, Z)
 
     var closest = (Noise3D(X-1, Y, Z) + Noise3D(X+1, Y, Z) + Noise3D(X, Y-1, Z) + Noise3D(X, Y+1, Z) + Noise3D(X, Y, Z+1) + Noise3D(X, Y, Z-1)) / 16.0;//19.999;
     
-    var self = Noise3D(X, Y, Z) / 4.0;
+    var self = Noise3D(X, Y, Z) / 8.0;
     
     
     return self + closest + medium + far;  
@@ -237,13 +237,13 @@ function InterpolateNoise3D(x, y, z, p)
 function Generate_Noise3D(posx, posy, posz, persistance, octaves)
 {
     var total = 0.0;
-    var p = persistance;
+    var p = 0.25;//persistance;
     var n = octaves;
 
     //int i = 0;
     for(var i=0; i < octaves; i++) 
     {
-    var frequency = Math.pow(2, i)  / 12000000.0;
+    var frequency = Math.pow(1/p, i);//Math.pow(2, i)  / 12000000.0;
     var amplitude = Math.pow(p, i);
     
     total = total + InterpolateNoise3D((posx)* frequency, (posy) * frequency, (posz) * frequency, amplitude) * amplitude;
@@ -300,8 +300,7 @@ TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
     
     var max = getMax(noise_sw, noise_se, noise_nw, noise_ne);
     var min = getMin(noise_sw, noise_se, noise_nw, noise_ne);
-    console.log(min, max);
-//    max = -max;
+
     //estimating the error of the bounding box to (k + 3) octaves. Currently k = 4
     var error = Math.pow(0.9, depth + 1) +  Math.pow(0.9, depth + 2) + Math.pow(0.9, depth + 3); 
     
