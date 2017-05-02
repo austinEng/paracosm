@@ -241,9 +241,9 @@ function Generate_Noise3D(posx, posy, posz, persistance, octaves)
     var n = octaves;
 
     //int i = 0;
-    for(var i=0; i < 4; i++) 
+    for(var i=0; i < octaves; i++) 
     {
-    var frequency = Math.pow(2, i);
+    var frequency = Math.pow(2, i)  / 12000000.0;
     var amplitude = Math.pow(p, i);
     
     total = total + InterpolateNoise3D((posx)* frequency, (posy) * frequency, (posz) * frequency, amplitude) * amplitude;
@@ -266,7 +266,7 @@ var ne_pos = [];
 
 TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
   let region = this.rootRegions[hemisphere].slice();
-
+    var depth = getDepth(index);
   indices.length = 0;
   while (index > 0) {
     let next = Math.floor((index - 1) / 4);
@@ -293,19 +293,20 @@ TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
     getPosition(region[2],region[3],0, ne_pos);
     
     //generate the noise value for the 4 corners
-    var noise_sw = Generate_Noise3D(sw_pos[0], sw_pos[1], sw_pos[2], 0.5, 8);
-    var noise_se = Generate_Noise3D(se_pos[0], se_pos[1], se_pos[2], 0.5, 8);
-    var noise_nw = Generate_Noise3D(nw_pos[0], nw_pos[1], nw_pos[2], 0.5, 8);
-    var noise_ne = Generate_Noise3D(ne_pos[0], ne_pos[1], ne_pos[2], 0.5, 8);
+    var noise_sw = Generate_Noise3D(sw_pos[0], sw_pos[1], sw_pos[2], 0.9, depth);
+    var noise_se = Generate_Noise3D(se_pos[0], se_pos[1], se_pos[2], 0.9, depth);
+    var noise_nw = Generate_Noise3D(nw_pos[0], nw_pos[1], nw_pos[2], 0.9, depth);
+    var noise_ne = Generate_Noise3D(ne_pos[0], ne_pos[1], ne_pos[2], 0.9, depth);
     
     var max = getMax(noise_sw, noise_se, noise_nw, noise_ne);
     var min = getMin(noise_sw, noise_se, noise_nw, noise_ne);
-    
+    console.log(min, max);
+//    max = -max;
     //estimating the error of the bounding box to (k + 3) octaves. Currently k = 4
-    var error = 0.125 * 1000000;
+    var error = Math.pow(0.9, depth + 1) +  Math.pow(0.9, depth + 2) + Math.pow(0.9, depth + 3); 
     
-    region[region.length - 2] = min * 1000000 - error;
-    region[region.length - 1] = max * 1000000 + error;
+    region[region.length - 2] = (min - error) * 2000000;
+    region[region.length - 1] = (max + error) * 2000000;
     
   return region;
 }
