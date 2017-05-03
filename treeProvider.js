@@ -302,9 +302,10 @@ TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
     var max = getMax(noise_sw, noise_se, noise_nw, noise_ne);
     var min = getMin(noise_sw, noise_se, noise_nw, noise_ne);
 
-    //estimating the error of the bounding box to (k + 3) octaves. Currently k = 4
-    var error = Math.pow(0.9, depth + 1) +  Math.pow(0.9, depth + 2) + Math.pow(0.9, depth + 3); 
+    //estimating the error of the bounding box to (k + 3) octaves, where k - depth of the k-d tree.
+    var error = Math.pow(0.5, depth + 1) +  Math.pow(0.5, depth + 2) + Math.pow(0.5, depth + 3); 
     
+    //set the bounding box of the tile to a tightly fit one
     region[region.length - 2] = (min - error) * 2000000;
     region[region.length - 1] = (max + error) * 2000000;
     

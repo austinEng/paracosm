@@ -162,7 +162,7 @@ function setPosition(originlon, originlat, lon, lat, height, result) {
     result[2] = scratchCartesian.z;
 
 
-    // position is relative to southwest corner
+    // position is relative to southwest corner, used for floating point precision.
     //  Cesium.Cartographic.fromRadians(originlon, originlat, 0, scratchCartographic);
     //  Cesium.Ellipsoid.WGS84.cartographicToCartesian(scratchCartographic, scratchCartesian);
     //  result[0] -= scratchCartesian.x;
@@ -445,9 +445,9 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             indices[i] = ind[i];
         }
    
-        //creating per face vertex and storing multiple same vertices per face
-        //creating per face normals storing them multiple times per vertex per face
-        //creating per face noise storing noise values per vertex per face
+        //creating per face vertex and storing vertices per face
+        //creating per face normals storing them per vertex per face
+        //creating per face per vertex noise value storing them
         //creating a new linear index array
         
         var A = new THREE.Vector3(0.0);
