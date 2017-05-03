@@ -237,7 +237,7 @@ function InterpolateNoise3D(x, y, z, p)
 function Generate_Noise3D(posx, posy, posz, persistance, octaves)
 {
     var total = 0.0;
-    var p = 0.25;//persistance;
+    var p = persistance;
     var n = octaves;
 
     //int i = 0;
@@ -246,8 +246,7 @@ function Generate_Noise3D(posx, posy, posz, persistance, octaves)
     var frequency = Math.pow(1/p, i);//Math.pow(2, i)  / 12000000.0;
     var amplitude = Math.pow(p, i);
     
-    total = total + InterpolateNoise3D((posx)* frequency, (posy) * frequency, (posz) * frequency, amplitude) * amplitude;
-    
+    total = total + InterpolateNoise3D((posx)* frequency / 600000, (posy) * frequency / 600000, (posz) * frequency / 600000, amplitude) * amplitude;
     }
     
     return total;
@@ -292,11 +291,13 @@ TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
     //getting the north east position in cartesian
     getPosition(region[2],region[3],0, ne_pos);
     
+    var persistance = 0.5;
+    
     //generate the noise value for the 4 corners
-    var noise_sw = Generate_Noise3D(sw_pos[0], sw_pos[1], sw_pos[2], 0.9, depth);
-    var noise_se = Generate_Noise3D(se_pos[0], se_pos[1], se_pos[2], 0.9, depth);
-    var noise_nw = Generate_Noise3D(nw_pos[0], nw_pos[1], nw_pos[2], 0.9, depth);
-    var noise_ne = Generate_Noise3D(ne_pos[0], ne_pos[1], ne_pos[2], 0.9, depth);
+    var noise_sw = Generate_Noise3D(sw_pos[0], sw_pos[1], sw_pos[2], persistance, depth);
+    var noise_se = Generate_Noise3D(se_pos[0], se_pos[1], se_pos[2], persistance, depth);
+    var noise_nw = Generate_Noise3D(nw_pos[0], nw_pos[1], nw_pos[2], persistance, depth);
+    var noise_ne = Generate_Noise3D(ne_pos[0], ne_pos[1], ne_pos[2], persistance, depth);
     
     var max = getMax(noise_sw, noise_se, noise_nw, noise_ne);
     var min = getMin(noise_sw, noise_se, noise_nw, noise_ne);

@@ -15,31 +15,31 @@ const THREE = require('three');
 //NOISE GENERATION
 function getFractionalPart(a)
 {
-    if(a < 0)
-        {
-            return -(Math.abs(a) - Math.floor(Math.abs(a)));
-        }
-    else if(a > 0)
-        {
-            return a - Math.floor(a);
-        }
-    else if(a == 0)
-        return 0;
+//    if(a < 0)
+//        {
+//            return -(Math.abs(a) - Math.floor(Math.abs(a)));
+//        }
+//    else if(a > 0)
+//        {
+//            return a - Math.floor(a);
+//        }
+//    else if(a == 0)
+        return a - Math.floor(a);
     
 }
 
 function getIntigerPart(a)
 {
-    if(a < 0)
-        {
-            return -(Math.floor(Math.abs(a)));
-        }
-    else if(a > 0)
-        {
-            return Math.floor(a);
-        }
-    else if(a == 0)
-        return 0;
+//    if(a < 0)
+//        {
+//            return -(Math.floor(Math.abs(a)));
+//        }
+//    else if(a > 0)
+//        {
+//            return Math.floor(a);
+//        }
+//    else if(a == 0)
+        return Math.floor(a);
 }
 
 function dotProduct(x1, y1, z1, x2, y2, z2)
@@ -78,6 +78,8 @@ function Interpolate(a, b, x)
     return a * (1.0 - t) + b * t;
 }
 
+
+
 function InterpolateNoise3D(x, y, z, p)
 {
     var int_X = getIntigerPart(x);
@@ -115,22 +117,21 @@ function InterpolateNoise3D(x, y, z, p)
 function Generate_Noise3D(posx, posy, posz, persistance, octaves)
 {
     var total = 0.0;
-    var p = 0.25;//persistance;
+    var p = persistance;
     var n = octaves;
 
     //int i = 0;
     for(var i=0; i < octaves; i++) 
     {
     var frequency = Math.pow(1/p, i);//Math.pow(2, i);/// 120000000;//12000000.0;
-    var amplitude = Math.pow(p, i*i);
+    var amplitude = Math.pow(p, i);
     
-    total = total + InterpolateNoise3D((posx)* frequency * 100, (posy) * frequency * 100, (posz) * frequency * 100, amplitude) * amplitude;
-    
+    total = total + InterpolateNoise3D((posx)* frequency / 600000, (posy) * frequency / 600000, (posz) * frequency / 600000, amplitude) * amplitude;
+
     }
     
     return total;
 }
-
 
 //NOISE GENERATION OVER
 
@@ -222,7 +223,7 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
     
     var northPole = (region[3] === Math.PI / 2); //false
     var southPole = (region[1] === -Math.PI / 2); //false
-    var pole = northPole || southPole;
+    var pole = false;//northPole || southPole;
 
 //    var vertexCount = pole ? 3 : 9;//81;//9;//4;
 //    var indexCount = 3 * (vertexCount - 2);
@@ -250,6 +251,13 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
     var componentBytes = 3 * Float32Array.BYTES_PER_ELEMENT;
     var corner;
 
+    var noisearr = new Float32Array(3 * vertexCount);  
+    
+    //for storing the positions and normals one for each indice values
+    var new_positions = new Float32Array(3 * indexCount);
+    var new_normals = new Float32Array(3 * indexCount);
+    var new_indices = new Uint16Array(indexCount);
+    var new_noisearr = new Float32Array(3 * indexCount);  
 
     if (!pole) 
     {
@@ -288,12 +296,16 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
                 
                 //OFFSET THE POSITIONS OF THE VERTICES ALONG THE NORMAL USING NOISE
                 var tree_depth = getDepth(index);
-                var noise_val = Generate_Noise3D(positions[3*p+0], positions[3*p+1], positions[3*p+2], 0.9, tree_depth);
+                var noise_val = Generate_Noise3D(positions[3*p+0], positions[3*p+1], positions[3*p+2], 0.5, tree_depth);
                 
                 noise_val = 0.5 + 0.5 * noise_val;
                 positions[3*p+0] = positions[3*p+0] + normals[3*p+0] * noise_val * 2000000;
                 positions[3*p+1] = positions[3*p+1] + normals[3*p+1] * noise_val * 2000000;
                 positions[3*p+2] = positions[3*p+2] + normals[3*p+2] * noise_val * 2000000;
+                
+                noisearr[3*p+0] = noise_val;
+                noisearr[3*p+1] = noise_val;
+                noisearr[3*p+2] = noise_val;
                 
                 p+=1;
             }
@@ -380,7 +392,6 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             positions[3*p+1] = CartesianPos.y;
             positions[3*p+2] = CartesianPos.z;
             
-            
             //set the normal
             Cesium.Cartographic.fromRadians(region[0], region[3], 0, CartographicPos);
             Cesium.Ellipsoid.WGS84.geodeticSurfaceNormalCartographic(CartographicPos, CartesianPos);
@@ -392,33 +403,6 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
         }
         
     }
-
-//        corner = 0;
-//        var sw = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
-//        if (!southPole) var se = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
-//        var ne = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
-//        if (!northPole) var nw = new Float32Array(positions.buffer, componentBytes * (corner++), 3);
-//
-//        setPosition(region[0], region[1], region[0], region[1], 0, sw); // south west
-//        if (!southPole) setPosition(region[0], region[1], region[2], region[1], 0, se); // south east
-//        setPosition(region[0], region[1], region[2], region[3], 0, ne); // north east
-//        if (!northPole) setPosition(region[0], region[1], region[0], region[3], 0, nw); // north west
-//
-//        corner = 0;
-//        setNormal(region[0], region[1], 0, new Float32Array(normals.buffer, componentBytes * (corner++), 3));
-//        if (!southPole) setNormal(region[2], region[1], 0, new Float32Array(normals.buffer, componentBytes * (corner++), 3));
-//        setNormal(region[2], region[3], 0, new Float32Array(normals.buffer, componentBytes * (corner++), 3));
-//        if (!northPole) setNormal(region[0], region[3], 0, new Float32Array(normals.buffer, componentBytes * (corner++), 3));
-//
-//    //FURTHURE SUBDIVISION OF THE TILE
-//    //position array -> 3 * [sw, (!southpole)se, ne, (!northpole)nw]
-//    // west, south, east, north, bottom, top <- region
-
-
-    console.log("size of normals: " + normals.length);
-    console.log("size of positions: " + positions.length);
-    console.log("no of indices: " + indexCount);
-    console.log("nor of vertex: " + vertexCount);
 
     //SETTING THE MIN AND MAX BOUNDS
     var minPosition = [positions[0], positions[1], positions[2]];
@@ -434,9 +418,6 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
         maxPosition[2] = Math.max(maxPosition[2], positions[3 * i + 2] + padding);
     }
 
-    
-//    indices.set(pole ? [0, 1, 2] : ind);
-    //[0, 4, 6, 0, 6, 5, 4, 1, 7, 4, 7, 6, 6, 7, 2, 6, 2, 8, 5, 6, 8, 5, 8, 3]); //[0, 1, 2, 0, 2, 3]);
     
     if(pole)
         indices.set([0,1,2]);
@@ -464,16 +445,86 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             indices[i] = ind[i];
         }
    
-        console.log("indices length: " + indices.length);
-    }
+        //creating per face vertex and storing multiple same vertices per face
+        //creating per face normals storing them multiple times per vertex per face
+        //creating per face noise storing noise values per vertex per face
+        //creating a new linear index array
+        
+        var A = new THREE.Vector3(0.0);
+        var B = new THREE.Vector3(0.0);
+        var C = new THREE.Vector3(0.0);
+        for(i = 0 ; i < indices.length; i+=3)
+        {
+            A.x = positions[3 * indices[i+2] + 0] - positions[3 * indices[i+1] + 0];   
+            A.y = positions[3 * indices[i+2] + 1] - positions[3 * indices[i+1] + 1];   
+            A.z = positions[3 * indices[i+2] + 2] - positions[3 * indices[i+1] + 2];
+            
+            B.x = positions[3 * indices[i+0] + 0] - positions[3 * indices[i+1] + 0];   
+            B.y = positions[3 * indices[i+0] + 1] - positions[3 * indices[i+1] + 1];   
+            B.z = positions[3 * indices[i+0] + 2] - positions[3 * indices[i+1] + 2];
+            
+            C.crossVectors(A,B);
+            C.normalize();
+            
+            //store the vertices
+            new_positions[3*(i+0)+0] = positions[3*indices[i+0]+0];
+            new_positions[3*(i+0)+1] = positions[3*indices[i+0]+1];
+            new_positions[3*(i+0)+2] = positions[3*indices[i+0]+2];
+            
+            new_positions[3*(i+1)+0] = positions[3*indices[i+1]+0];
+            new_positions[3*(i+1)+1] = positions[3*indices[i+1]+1];
+            new_positions[3*(i+1)+2] = positions[3*indices[i+1]+2];
+            
+            new_positions[3*(i+2)+0] = positions[3*indices[i+2]+0];
+            new_positions[3*(i+2)+1] = positions[3*indices[i+2]+1];
+            new_positions[3*(i+2)+2] = positions[3*indices[i+2]+2];
+            //done
+            
+            //storing the normals
+            new_normals[3*(i+0)+0] = C.x;
+            new_normals[3*(i+0)+1] = C.y;
+            new_normals[3*(i+0)+2] = C.z;
+            
+            new_normals[3*(i+1)+0] = C.x;
+            new_normals[3*(i+1)+1] = C.y;
+            new_normals[3*(i+1)+2] = C.z;
+            
+            new_normals[3*(i+2)+0] = C.x;
+            new_normals[3*(i+2)+1] = C.y;
+            new_normals[3*(i+2)+2] = C.z;
+            //done
+            
+            //storing the noise
+            new_noisearr[3*(i+0)+0] = noisearr[3*indices[i+0]+0];    
+            new_noisearr[3*(i+0)+1] = noisearr[3*indices[i+0]+1];    
+            new_noisearr[3*(i+0)+2] = noisearr[3*indices[i+0]+2];
+            
+            new_noisearr[3*(i+0)+0] = noisearr[3*indices[i+1]+0];    
+            new_noisearr[3*(i+1)+1] = noisearr[3*indices[i+1]+1];    
+            new_noisearr[3*(i+2)+2] = noisearr[3*indices[i+1]+2];
+            
+            new_noisearr[3*(i+0)+0] = noisearr[3*indices[i+2]+0];    
+            new_noisearr[3*(i+1)+1] = noisearr[3*indices[i+2]+1];    
+            new_noisearr[3*(i+2)+2] = noisearr[3*indices[i+2]+2];
+            //done
+            
+        }
+        
+        for(var i = 0; i < indices.length; i++)
+        {
+            new_indices[i] = i;
+        }
 
+    }
+    
     //END PROCEDURAL TERRAIN STUFF
 
     var buffer = Buffer.concat([
-    Buffer.from(indices.buffer),
-    Buffer.from(normals.buffer),
-    Buffer.from(positions.buffer)
-  ], indices.byteLength + normals.byteLength + positions.byteLength);
+    Buffer.from(new_indices.buffer),
+    Buffer.from(new_normals.buffer),
+    Buffer.from(new_positions.buffer),
+    Buffer.from(new_noisearr.buffer)//added
+  ], new_indices.byteLength + new_normals.byteLength + new_positions.byteLength + new_noisearr.byteLength);
 
     // https://github.com/KhronosGroup/glTF/tree/master/specification/1.0/schema
     var gltf = {
@@ -491,21 +542,32 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
                 byteOffset: 0,
                 byteStride: 0,
                 componentType: 5126, // FLOAT
-                count: vertexCount,
+                count: indexCount,
                 max: [1, 1, 1],
                 min: [-1, -1, -1],
                 type: "VEC3"
             },
             accessor_pos: {
                 bufferView: "bufferViews_attr",
-                byteOffset: componentBytes * vertexCount,
+                byteOffset: componentBytes * indexCount,
                 byteStride: 0,
                 componentType: 5126, // FLOAT
-                count: vertexCount,
+                count: indexCount,
                 max: maxPosition,
                 min: minPosition,
                 type: "VEC3"
+            },
+            accessor_noise: {//added
+                bufferView: "bufferViews_attr",
+                byteOffset: componentBytes * indexCount * 2,
+                byteStride: 0,
+                componentType: 5126, // FLOAT
+                count: indexCount,
+                max: [1, 1, 1],
+                min: [-1, -1, -1],
+                type: "VEC3"
             }
+            
         },
         asset: {
             premultipliedAlpha: true,
@@ -524,8 +586,8 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             },
             bufferViews_attr: {
                 buffer: "Terrain",
-                byteLength: normals.byteLength + positions.byteLength,
-                byteOffset: indices.byteLength,
+                byteLength: new_normals.byteLength + new_positions.byteLength + new_noisearr.byteLength, //added
+                byteOffset: new_indices.byteLength,
                 target: 34962 // ARRAY_BUFFER
             }
         },
@@ -553,6 +615,7 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
                         attributes: {
                             NORMAL: "accessor_nor",
                             POSITION: "accessor_pos",
+                            NOISE: "accessor_noise" //added
                         },
                         indices: "accessor_ind",
                         material: "material_terrain",
@@ -573,7 +636,8 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             program_terrain: {
                 attributes: [
           "a_normal",
-          "a_position"
+          "a_position",
+          "a_noise"//added
         ],
                 fragmentShader: 'terrainFS',
                 vertexShader: 'terrainVS'
@@ -601,7 +665,8 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
             technique_terrain: {
                 attributes: {
                     a_normal: "normal",
-                    a_position: "position"
+                    a_position: "position",
+                    a_noise: "noise" //added
                 },
                 parameters: {
                     "diffuse": {
@@ -626,6 +691,10 @@ TerrainProvider.prototype.generateTerrain = function (hemisphere, index) {
                     "projectionMatrix": {
                         "semantic": "PROJECTION",
                         "type": 35676
+                    },
+                    "noise": {//added
+                        "semantic": "NOISE",
+                        "type": 35665
                     },
                 },
                 program: "program_terrain",
