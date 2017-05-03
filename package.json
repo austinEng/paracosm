@@ -3,8 +3,15 @@
     "start": "nodemon server.js --ignore example/",
     "serve": "node server.js",
     "postinstall": "cd cesium && npm install",
-    "build": "cd cesium && npm run release"
+    "build": "cd cesium && npm run release",
+      "deploy": "gh-pages-deploy"
   },
+"gh-pages-deploy": {
+    "prep": [
+      "build"
+    ],
+    "noprompt": true
+  },    
   "dependencies": {
     "3d-tiles-tools": "^0.1.2",
     "cesium": "^1.32.1",
