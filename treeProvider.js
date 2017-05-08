@@ -2,6 +2,14 @@
 'use strict';
 const Cesium = require('cesium');
 
+const ProceduralWorld = require('bindings')('ProceduralWorld');
+
+// console.log(JSON.stringify(terrainGenerator.getRoot(), null, ' '));
+// console.log(JSON.stringify(terrainGenerator.generateNode({
+//   hemisphere: 0,
+//   index: 14
+// }), null, '  '));
+
 function TreeProvider(options) {
   this.generationDepth = options.generationDepth || 4;
   this.rootError = options.rootError || 100000; //100; options.rootError || 100;
@@ -13,6 +21,13 @@ function TreeProvider(options) {
     [ -Math.PI, -Math.PI / 2, 0,           Math.PI / 2, 0, this.maxHeight ],
     [ 0,            -Math.PI / 2, Math.PI, Math.PI / 2, 0, this.maxHeight ]
   ];
+
+  this.terrainGenerator = new ProceduralWorld.TerrainGenerator({
+    persistence: 0.5,
+    maximumDisplacement: 10000,
+    generationDepth: 2,
+    worldRadius: this.worldRadius
+  });
 }
 
 function getDepth(index) {
@@ -25,6 +40,7 @@ function getDepth(index) {
 }
 
 TreeProvider.prototype.getRoot = function() {
+  return this.terrainGenerator.getRoot();
   return {
     boundingVolume: {
       sphere: [ 0, 0, 0, this.worldRadius ],
@@ -47,6 +63,12 @@ TreeProvider.prototype.getRoot = function() {
 }
 
 TreeProvider.prototype.generateNode = function(hemisphere, index, generationDepth) {
+  return this.terrainGenerator.generateNode({
+    hemisphere,
+    index,
+    generationDepth
+  });
+
   var depth = getDepth(index);
   var error = this.rootError * Math.pow(this.errorFactor, depth);
 
@@ -264,6 +286,11 @@ var ne_pos = [];
 
 
 TreeProvider.prototype.generateBoundingRegion = function(hemisphere, index) {
+  return this.terrainGenerator.generateBoundingRegion({
+    hemisphere, 
+    index
+  });
+
   let region = this.rootRegions[hemisphere].slice();
     var depth = getDepth(index);
   indices.length = 0;
