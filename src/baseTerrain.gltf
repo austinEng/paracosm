@@ -1,0 +1,181 @@
+R"({
+    "accessors": {
+        "accessor_ind": {
+            "bufferView": "bufferView_ind",
+            "byteOffset": 0,
+            "byteStride": 0,
+            "componentType": 5123, // UNSIGNED_SHORT
+            "count": 0,
+            "type": "SCALAR"
+        },
+        "accessor_nor": {
+            "bufferView": "bufferViews_attr",
+            "byteOffset": 0,
+            "byteStride": 0,
+            "componentType": 5126, // FLOAT
+            "count": 0,
+            "max": [1, 1, 1],
+            "min": [-1, -1, -1],
+            "type": "VEC3"
+        },
+        "accessor_pos": {
+            "bufferView": "bufferViews_attr",
+            "byteOffset": 0,
+            "byteStride": 0,
+            "componentType": 5126, // FLOAT
+            "count": 0,
+            "max": [0, 0, 0],
+            "min": [0, 0, 0],
+            "type": "VEC3"
+        },
+        "accessor_uv": {
+            "bufferView": "bufferViews_attr",
+            "byteOffset": 0,
+            "byteStride": 0,
+            "componentType": 5126, // FLOAT
+            "count": 0,
+            "max": [1, 1],
+            "min": [0, 0],
+            "type": "VEC2"
+        }
+    },
+    "asset": {
+        "premultipliedAlpha": true,
+        "profile": {
+            "api": "WebGL",
+            "version": "1.0.2"
+        },
+        "version": "1.0"
+    },
+    "bufferViews": {
+        "bufferView_ind": {
+            "buffer": "binary_glTF",
+            "byteLength": 0,
+            "byteOffset": 0,
+            "target": 34963 // ELEMENT_ARRAY_BUFFER 
+        },
+        "bufferViews_attr": {
+            "buffer": "binary_glTF",
+            "byteLength": 0,
+            "byteOffset": 0,
+            "target": 34962 // ARRAY_BUFFER
+        }
+    },
+    "buffers": {
+        "binary_glTF": {
+            "byteLength": 0,
+            "type": "arraybuffer",
+            "uri": "data:,"
+        }
+    },
+    "materials": {
+        "material_terrain": {
+            "name": "MaterialTerrain",
+            "technique": "technique_terrain",
+            "values": {
+                "diffuse": [ 0.8, 0.8, 0.8, 1]
+            }
+        }
+    },
+    "meshes": {
+        "mesh_terrain": {
+            "name": "Terrain",
+            "primitives": [
+                {
+                    "attributes": {
+                        "NORMAL": "accessor_nor",
+                        "POSITION": "accessor_pos"
+                    },
+                    "indices": "accessor_ind",
+                    "material": "material_terrain",
+                    "mode": 4 // triangles
+                }
+            ]
+        }
+    },
+    "nodes": {
+        "node_terrain": {
+            "children": [],
+            "matrix": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1],
+            "meshes": [ "mesh_terrain" ],
+            "name": "Terrain"
+        }
+    },
+    "programs": {
+        "program_terrain": {
+            "attributes": [
+                "a_normal",
+                "a_position"
+            ],
+            "fragmentShader": "terrainFS",
+            "vertexShader": "terrainVS"
+        }
+    },  
+    "scene": "defaultScene",
+    "scenes": {
+        "defaultScene": {
+            "nodes": [
+                "node_terrain"
+            ]
+        }
+    },
+    "shaders": {
+        "terrainFS": {
+            "type": 35632,
+            "uri": "shaders/terrainFS.glsl"
+        },
+        "terrainVS": {
+            "type": 35633,
+            "uri": "shaders/terrainVS.glsl"
+        }
+    },
+    "techniques": {
+        "technique_terrain": {
+            "attributes": {
+                "a_position": "position",
+                "a_normal": "normal"
+            },
+            "parameters": {
+                "diffuse": {
+                    "type": 35666
+                },
+                "modelViewMatrix": {
+                    "semantic": "MODELVIEW",
+                    "type": 35676
+                },
+                "normal": {
+                    "semantic": "NORMAL",
+                    "type": 35665
+                },
+                "normalMatrix": {
+                    "semantic": "MODELVIEWINVERSETRANSPOSE",
+                    "type": 35675
+                },
+                "position": {
+                    "semantic": "POSITION",
+                    "type": 35665
+                },
+                "projectionMatrix": {
+                    "semantic": "PROJECTION",
+                    "type": 35676
+                }
+            },
+            "program": "program_terrain",
+            "states": {
+                "enable": [
+                    2929, // DEPTH_TEST
+                    2884  // CULL_FACE
+                ]
+            },
+            "uniforms": {
+                "u_diffuse": "diffuse",
+                "u_modelViewMatrix": "modelViewMatrix",
+                "u_normalMatrix": "normalMatrix",
+                "u_projectionMatrix": "projectionMatrix"
+            }
+        }
+    },
+    "extensionsUsed": [
+        "KHR_binary_glTF"   
+    ]
+})";

@@ -1,5 +1,8 @@
 'use strict';
 
+const SegfaultHandler = require('segfault-handler');
+SegfaultHandler.registerHandler("crash.log");
+
 (function() {
   // Parse options to start server
   const yargs = require('yargs').options({
@@ -41,29 +44,25 @@
   const server = app.listen(argv.port, argv.public ? undefined : 'localhost', function() {
     console.log('Terrain server running at http://%s:%d/', server.address().address, server.address().port);
   });
-  
-  const options = {
+
+  const paracosm = require('bindings')('paracosm');
+  const terrainGenerator = new paracosm.TerrainGenerator({
+    ellipsoid: [6378137.0, 6378137.0, 6356752.3142451793],
+    maximumDisplacement: 100000,
+    persistence: 0.5,
     generationDepth: 3,
-    rootError: 2500000,
-    errorFactor: 0.5,
-    worldRadius: 6378137,
-    maxHeight: 100000
-  };
-
-  const TreeProvider = require('./treeProvider');
-  const TerrainProvider = require('./terrainProvider');
-
-  var treeProvider = new TreeProvider(options);
-  var terrainProvider = new TerrainProvider(treeProvider);
+    contentGenerationDepth: 3,
+  });
 
   app.get('/tileset.json', function(req, res) {
+    var root = terrainGenerator.getRoot();
     res.json({
       asset: {
         version: '0.0',
         gltfUpAxis: 'Z'
       },
-      geometricError: options.rootError,
-      root: treeProvider.getRoot()
+      geometricError: root.geometricError,
+      root,
     });
   });
   
@@ -71,7 +70,12 @@
     const index = req.params.index;
     const hemisphere = req.params.hemisphere;
 
-    var node = treeProvider.generateNode(hemisphere, parseInt(index), 0);
+    var node = terrainGenerator.generateNode({
+      hemisphere,
+      index: parseInt(index),
+      generationDepth: 0
+    });
+
     res.json({
       asset: {
         version: '0.0'
@@ -85,12 +89,13 @@
     const index = req.params.index;
     const hemisphere = req.params.hemisphere;
 
-    terrainProvider.generateTerrain(hemisphere, parseInt(index)).then(function(terrain) {
-      res.send(terrain);
+    var terrain = terrainGenerator.generateTerrain({
+      hemisphere,
+      index: parseInt(index)
     });
+    res.send(terrain);
   });
 
-  app.use('/Cesium', express.static(path.join(__dirname, 'cesium/Build/Cesium')));
+  app.use('/Cesium', express.static(path.join(__dirname, 'cesium/Build/CesiumUnminified')));
   app.use('/', express.static(__dirname));
-
 })();
