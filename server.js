@@ -45,9 +45,8 @@ SegfaultHandler.registerHandler("crash.log");
     console.log('Terrain server running at http://%s:%d/', server.address().address, server.address().port);
   });
 
-  const ProceduralWorld = require('bindings')('ProceduralWorld');
-  const terrainGenerator = new ProceduralWorld.TerrainGenerator({
-    // worldRadius: 6378137,
+  const paracosm = require('bindings')('paracosm');
+  const terrainGenerator = new paracosm.TerrainGenerator({
     ellipsoid: [6378137.0, 6378137.0, 6356752.3142451793],
     maximumDisplacement: 100000,
     persistence: 0.5,

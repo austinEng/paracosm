@@ -9,6 +9,8 @@
 #include <iostream>
 #include "terrainGenerator.h"
 
+namespace paracosm {
+
 const BoundingRegion ROOT_REGIONS[2] = {
     BoundingRegion(-M_PI, -M_PI / 2, 0, M_PI / 2),
     BoundingRegion(0, -M_PI / 2, M_PI, M_PI / 2)
@@ -223,36 +225,6 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
             
             cartographicToCartesian(cartographic, config.ellipsoid, positions + 3*idx, normals + 3*idx);
 
-            // double cosLatitude = std::cos(latitude);
-            // double nx = cosLatitude * std::cos(longitude);
-            // double ny = cosLatitude * std::sin(longitude);
-            // double nz = std::sin(latitude);
-            // double length = std::sqrt(nx*nx + ny*ny + nz*nz);
-            // nx /= length;
-            // ny /= length;
-            // nz /= length;
-
-            // normals[3*idx + 0] = (float) nx;
-            // normals[3*idx + 1] = (float) ny;
-            // normals[3*idx + 2] = (float) nz;
-
-            // double kx = nx * config.ellipsoid[0] * config.ellipsoid[0];
-            // double ky = ny * config.ellipsoid[1] * config.ellipsoid[1];
-            // double kz = nz * config.ellipsoid[2] * config.ellipsoid[2];
-
-            // double gamma = std::sqrt(nx * kx + ny * ky + nz * kz);
-            // kx /= gamma;
-            // ky /= gamma;
-            // kz /= gamma;
-
-            // nx *= height;
-            // ny *= height;
-            // nz *= height;
-
-            // positions[3*idx + 0] = (float) (nx + kx);
-            // positions[3*idx + 1] = (float) (ny + ky);
-            // positions[3*idx + 2] = (float) (nz + kz);
-
             if (i == 0 && j == 0) {
                 minPosition[0] = positions[3*idx + 0];
                 minPosition[1] = positions[3*idx + 1];
@@ -356,4 +328,6 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
     delete glbBuffer;
 
     return data;
+}
+
 }

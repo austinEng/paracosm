@@ -3,6 +3,8 @@
 
 #include <json/json.h>
 
+namespace paracosm {
+
 enum Hemisphere {
     WEST = 0,
     EAST = 1
@@ -56,3 +58,5 @@ public:
 private:
     Json::Value baseTerrain;
 };
+
+}

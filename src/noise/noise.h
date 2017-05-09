@@ -1,4 +1,5 @@
 #pragma once
+namespace paracosm {
 namespace noise {
 
 template <unsigned int D, typename T>
@@ -7,4 +8,5 @@ public:
     virtual T sample(T[D] point) const = 0;
 };
 
+}
 }

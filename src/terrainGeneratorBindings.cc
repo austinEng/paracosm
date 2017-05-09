@@ -2,6 +2,8 @@
 #include <nan.h>
 #include "terrainGenerator.h"
 
+namespace paracosm {
+
 class TerrainGeneratorObject : public Nan::ObjectWrap {
 public:
     static NAN_MODULE_INIT(Init) {
@@ -185,3 +187,5 @@ private:
 };
 
 NODE_MODULE(ProceduralWorld, TerrainGeneratorObject::Init)
+
+}

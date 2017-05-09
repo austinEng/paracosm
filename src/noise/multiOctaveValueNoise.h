@@ -1,6 +1,7 @@
 #pragma once
 #include "noise.h"
 
+namespace paracosm {
 namespace noise {
 
 template <unsigned int D, typename T>
@@ -25,4 +26,5 @@ private:
 
 };
 
+}
 }
