@@ -1,10 +1,17 @@
 {
+  "name": "paracosm",
+  "description": "Procedural 3D Tiles Server",
+  "version": "0.0.1",
+  "engines": {
+    "node": "6.x"
+  },
   "scripts": {
     "start": "nodemon server.js --ignore example/",
     "serve": "node server.js",
-    "postinstall": "cd cesium && npm install && npm run release",
-    "build": "cmake-js build -D",
-    "compile": "cmake-js compile"
+    "postinstall": "npm run compile && npm run buildCesium",
+    "buildCesium": "cd cesium && npm install && npm run combine",
+    "build": "cmake-js build -D -d . -O build",
+    "compile": "cmake-js compile -d . -O build"
   },
 "gh-pages-deploy": {
     "prep": [
