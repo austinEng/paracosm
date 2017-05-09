@@ -29,7 +29,7 @@ public:
         double levelDisplacement;
         unsigned int generationDepth;
         unsigned int contentGenerationDepth;
-        double worldRadius;
+        double ellipsoid[3];
 
         void computeProperties();
     };

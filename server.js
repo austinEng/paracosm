@@ -47,7 +47,8 @@ SegfaultHandler.registerHandler("crash.log");
 
   const ProceduralWorld = require('bindings')('ProceduralWorld');
   const terrainGenerator = new ProceduralWorld.TerrainGenerator({
-    worldRadius: 6378137,
+    // worldRadius: 6378137,
+    ellipsoid: [6378137.0, 6378137.0, 6356752.3142451793],
     maximumDisplacement: 100000,
     persistence: 0.5,
     generationDepth: 3,

@@ -1,13 +1,6 @@
+#define NOMINMAX
 #include <nan.h>
 #include "terrainGenerator.h"
-// using v8::FunctionTemplate;
-// using v8::Handle;
-// using v8::Object;
-// using v8::String;
-// using v8::Local;
-// using Nan::GetFunction;
-// using Nan::New;
-// using Nan::Set;
 
 class TerrainGeneratorObject : public Nan::ObjectWrap {
 public:
@@ -42,9 +35,12 @@ private:
             config.maximumDisplacement = params->Get(v8::String::NewFromUtf8(isolate, "maximumDisplacement"))->NumberValue();
             config.generationDepth = (unsigned int) params->Get(v8::String::NewFromUtf8(isolate, "generationDepth"))->NumberValue();
             config.contentGenerationDepth = (unsigned int) params->Get(v8::String::NewFromUtf8(isolate, "contentGenerationDepth"))->NumberValue();
-            config.worldRadius = (unsigned int) params->Get(v8::String::NewFromUtf8(isolate, "worldRadius"))->NumberValue();
+            v8::Handle<v8::Array> ellipsoid = v8::Handle<v8::Array>::Cast(params->Get(v8::String::NewFromUtf8(isolate, "ellipsoid")));
+            config.ellipsoid[0] = ellipsoid->Get(0)->NumberValue();
+            config.ellipsoid[1] = ellipsoid->Get(1)->NumberValue();
+            config.ellipsoid[2] = ellipsoid->Get(2)->NumberValue();
             config.computeProperties();
-            
+
             TerrainGeneratorObject* obj = new TerrainGeneratorObject(config);
             obj->Wrap(info.This());
             info.GetReturnValue().Set(info.This());
@@ -67,7 +63,8 @@ private:
         v8::Handle<v8::Object> boundingVolume = v8::Object::New(isolate);
         v8::Handle<v8::Array> sphere = v8::Array::New(isolate, 4);
         v8::Local<v8::Number> zero = v8::Number::New(isolate, 0);
-        v8::Local<v8::Number> radius = v8::Number::New(isolate, obj->generator.config.worldRadius + obj->generator.config.maximumDisplacement);
+        double maxRadius = std::max(std::max(obj->generator.config.ellipsoid[0], obj->generator.config.ellipsoid[1]), obj->generator.config.ellipsoid[2]);
+        v8::Local<v8::Number> radius = v8::Number::New(isolate, maxRadius + obj->generator.config.maximumDisplacement);
         sphere->Set(0, zero);
         sphere->Set(1, zero);
         sphere->Set(2, zero);

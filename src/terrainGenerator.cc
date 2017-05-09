@@ -106,14 +106,73 @@ double TerrainGenerator::sampleHeight(double longitude, double latitude, unsigne
     return 0;
 }
 
+template <typename A, typename B, typename C, typename D>
+void cartographicToCartesian(A cartographic[3], B ellipsoid[3], C cartesian[3], D normal[3]) {
+    double cosLatitude = std::cos(cartographic[1]);
+    double nx = cosLatitude * std::cos(cartographic[0]);
+    double ny = cosLatitude * std::sin(cartographic[0]);
+    double nz = std::sin(cartographic[1]);
+    double length = std::sqrt(nx*nx + ny*ny + nz*nz);
+    nx /= length;
+    ny /= length;
+    nz /= length;
+
+    normal[0] = (D) nx;
+    normal[1] = (D) ny;
+    normal[2] = (D) nz;
+
+    double kx = nx * ellipsoid[0] * ellipsoid[0];
+    double ky = ny * ellipsoid[1] * ellipsoid[1];
+    double kz = nz * ellipsoid[2] * ellipsoid[2];
+
+    double gamma = std::sqrt(nx * kx + ny * ky + nz * kz);
+    kx /= gamma;
+    ky /= gamma;
+    kz /= gamma;
+
+    nx *= cartographic[2];
+    ny *= cartographic[2];
+    nz *= cartographic[2];
+
+    cartesian[0] = (A) (nx + kx);
+    cartesian[1] = (A) (ny + ky);
+    cartesian[2] = (A) (nz + kz);
+}
+
 double TerrainGenerator::calculateRegionError(const BoundingRegion &region) const {
-    // TODO: use regional diagonal and account for ellipsoid instead of sphere
+    double cartographic[3] = {0,0,0};
+    double cartesian[3];
+    double normal[3];
+
+    double radius = 0;
+
+    cartographic[0] = region.w;
+    cartographic[1] = region.s;
+    cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
+    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+
+    cartographic[0] = region.e;
+    cartographic[1] = region.s;
+    cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
+    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+
+    cartographic[0] = region.w;
+    cartographic[1] = region.n;
+    cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
+    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+
+    cartographic[0] = region.e;
+    cartographic[1] = region.n;
+    cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
+    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+
+    radius /= 4;
 
     // the arc this region spans
     double theta = (region.e - region.w) / std::pow(2, config.contentGenerationDepth);
 
     // how far off the chord spanning this arc is from the arc
-    double chordError = config.worldRadius * (1 - std::cos(theta / 2));
+    double chordError = radius * (1 - std::cos(theta / 2));
 
     return chordError;
 }
@@ -160,50 +219,54 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
             double latitude = region.s + (j * step) * (region.n - region.s);
             double height = sampleHeight(longitude, latitude, depth);
             
-            double cosLatitude = std::cos(latitude);
-            double nx = cosLatitude * std::cos(longitude);
-            double ny = cosLatitude * std::sin(longitude);
-            double nz = std::sin(latitude);
-            double length = std::sqrt(nx*nx + ny*ny + nz*nz);
-            nx /= length;
-            ny /= length;
-            nz /= length;
+            double cartographic[3] = {longitude, latitude, height};
+            
+            cartographicToCartesian(cartographic, config.ellipsoid, positions + 3*idx, normals + 3*idx);
 
-            normals[3*idx + 0] = (float) nx;
-            normals[3*idx + 1] = (float) ny;
-            normals[3*idx + 2] = (float) nz;
+            // double cosLatitude = std::cos(latitude);
+            // double nx = cosLatitude * std::cos(longitude);
+            // double ny = cosLatitude * std::sin(longitude);
+            // double nz = std::sin(latitude);
+            // double length = std::sqrt(nx*nx + ny*ny + nz*nz);
+            // nx /= length;
+            // ny /= length;
+            // nz /= length;
 
-            double kx = nx * config.worldRadius * config.worldRadius;
-            double ky = ny * config.worldRadius * config.worldRadius;
-            double kz = nz * config.worldRadius * config.worldRadius;
+            // normals[3*idx + 0] = (float) nx;
+            // normals[3*idx + 1] = (float) ny;
+            // normals[3*idx + 2] = (float) nz;
 
-            double gamma = std::sqrt(nx * kx + ny * ky + nz * kz);
-            kx /= gamma;
-            ky /= gamma;
-            kz /= gamma;
+            // double kx = nx * config.ellipsoid[0] * config.ellipsoid[0];
+            // double ky = ny * config.ellipsoid[1] * config.ellipsoid[1];
+            // double kz = nz * config.ellipsoid[2] * config.ellipsoid[2];
 
-            nx *= height;
-            ny *= height;
-            nz *= height;
+            // double gamma = std::sqrt(nx * kx + ny * ky + nz * kz);
+            // kx /= gamma;
+            // ky /= gamma;
+            // kz /= gamma;
 
-            positions[3*idx + 0] = (float) (nx + kx);
-            positions[3*idx + 1] = (float) (ny + ky);
-            positions[3*idx + 2] = (float) (nz + kz);
+            // nx *= height;
+            // ny *= height;
+            // nz *= height;
+
+            // positions[3*idx + 0] = (float) (nx + kx);
+            // positions[3*idx + 1] = (float) (ny + ky);
+            // positions[3*idx + 2] = (float) (nz + kz);
 
             if (i == 0 && j == 0) {
-                minPosition[0] = positions[idx + 0];
-                minPosition[1] = positions[idx + 1];
-                minPosition[2] = positions[idx + 2];
-                maxPosition[0] = positions[idx + 0];
-                maxPosition[1] = positions[idx + 1];
-                maxPosition[2] = positions[idx + 2];
+                minPosition[0] = positions[3*idx + 0];
+                minPosition[1] = positions[3*idx + 1];
+                minPosition[2] = positions[3*idx + 2];
+                maxPosition[0] = positions[3*idx + 0];
+                maxPosition[1] = positions[3*idx + 1];
+                maxPosition[2] = positions[3*idx + 2];
             } else {
-                minPosition[0] = std::min(minPosition[0], positions[idx + 0]);
-                minPosition[1] = std::min(minPosition[1], positions[idx + 1]);
-                minPosition[2] = std::min(minPosition[2], positions[idx + 2]);
-                maxPosition[0] = std::max(maxPosition[0], positions[idx + 0]);
-                maxPosition[1] = std::max(maxPosition[1], positions[idx + 1]);
-                maxPosition[2] = std::max(maxPosition[2], positions[idx + 2]);
+                minPosition[0] = std::min(minPosition[0], positions[3*idx + 0]);
+                minPosition[1] = std::min(minPosition[1], positions[3*idx + 1]);
+                minPosition[2] = std::min(minPosition[2], positions[3*idx + 2]);
+                maxPosition[0] = std::max(maxPosition[0], positions[3*idx + 0]);
+                maxPosition[1] = std::max(maxPosition[1], positions[3*idx + 1]);
+                maxPosition[2] = std::max(maxPosition[2], positions[3*idx + 2]);
             }
 
             uvs[2*idx + 0] = (float) i / steps;
