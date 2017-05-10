@@ -10,8 +10,8 @@
     "serve": "node server.js",
     "postinstall": "npm run compile && npm run buildCesium",
     "buildCesium": "cd cesium && npm install && npm run combine",
-    "build": "cmake-js build -D -d . -O build",
-    "compile": "cmake-js compile -d . -O build"
+    "build": "cmake-js build -D",
+    "compile": "cmake-js compile"
   },
 "gh-pages-deploy": {
     "prep": [
