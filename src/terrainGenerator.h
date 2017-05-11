@@ -2,6 +2,7 @@
 #pragma once
 
 #include <json/json.h>
+#include "noise/multiOctaveValueNoise.h"
 
 namespace paracosm {
 
@@ -37,6 +38,7 @@ public:
     };
 
     const Config config;
+    // const noise::MultiOctaveValueNoise<2, double> noiseGenerator;
 
     TerrainGenerator(const Config &config);
     ~TerrainGenerator();

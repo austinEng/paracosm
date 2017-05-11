@@ -49,7 +49,7 @@ SegfaultHandler.registerHandler("crash.log");
   const terrainGenerator = new paracosm.TerrainGenerator({
     ellipsoid: [6378137.0, 6378137.0, 6356752.3142451793],
     maximumDisplacement: 100000,
-    persistence: 0.5,
+    persistence: 0.7,
     generationDepth: 3,
     contentGenerationDepth: 3,
   });

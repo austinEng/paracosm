@@ -20,7 +20,8 @@ void TerrainGenerator::Config::computeProperties() {
     levelDisplacement = -maximumDisplacement / std::log(persistence);
 }
 
-TerrainGenerator::TerrainGenerator(const Config &config) : config(config) {
+TerrainGenerator::TerrainGenerator(const Config &config) : 
+    config(config) {
 
     Json::Reader reader;
 
@@ -105,7 +106,9 @@ unsigned int TerrainGenerator::getDepth(unsigned int index) const {
 }
 
 double TerrainGenerator::sampleHeight(double longitude, double latitude, unsigned int level) const {
-    return 0;
+    noise::MultiOctaveValueNoise<2, double> noiseGenerator(noise::MultiOctaveValueNoise<2, double>::Config(2*M_PI, 1, config.persistence));
+    double point[2] = {longitude, latitude};
+    return config.levelDisplacement * noiseGenerator.sample(point, level);
 }
 
 template <typename A, typename B, typename C, typename D>
@@ -136,9 +139,9 @@ void cartographicToCartesian(A cartographic[3], B ellipsoid[3], C cartesian[3], 
     ny *= cartographic[2];
     nz *= cartographic[2];
 
-    cartesian[0] = (A) (nx + kx);
-    cartesian[1] = (A) (ny + ky);
-    cartesian[2] = (A) (nz + kz);
+    cartesian[0] = (C) (nx + kx);
+    cartesian[1] = (C) (ny + ky);
+    cartesian[2] = (C) (nz + kz);
 }
 
 double TerrainGenerator::calculateRegionError(const BoundingRegion &region) const {
@@ -219,7 +222,7 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
         double longitude = region.w + (i * step) * (region.e - region.w);
         for (unsigned int j = 0; j <= steps; ++j) {
             double latitude = region.s + (j * step) * (region.n - region.s);
-            double height = sampleHeight(longitude, latitude, depth);
+            double height = sampleHeight(longitude, latitude, depth + config.contentGenerationDepth);
             
             double cartographic[3] = {longitude, latitude, height};
             
