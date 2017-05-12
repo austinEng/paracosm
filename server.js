@@ -61,7 +61,7 @@ SegfaultHandler.registerHandler("crash.log");
         version: '0.0',
         gltfUpAxis: 'Z'
       },
-      geometricError: root.geometricError,
+      geometricError: 2*(6378137.0 + 100000),
       root,
     });
   });

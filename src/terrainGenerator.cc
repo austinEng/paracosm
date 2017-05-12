@@ -90,8 +90,8 @@ BoundingRegion TerrainGenerator::generateBoundingRegion(Hemisphere hemisphere, u
     double ne = sampleHeight(region.e, region.n, depth);
     terrainError = calculateTerrainError(depth, config.contentGenerationDepth);
     
-    region.h1 = std::min(std::min(sw, nw), std::min(se, ne)) - terrainError;
-    region.h2 = std::max(std::max(sw, nw), std::max(se, ne)) + terrainError;
+    region.h1 = std::min(std::min(sw, nw), std::min(se, ne));// - terrainError;
+    region.h2 = std::max(std::max(sw, nw), std::max(se, ne));// + terrainError;
     
     return region;
 }
@@ -183,10 +183,11 @@ double TerrainGenerator::calculateRegionError(const BoundingRegion &region) cons
 }
 
 double TerrainGenerator::calculateTerrainError(unsigned int level, unsigned int depth) const {
-    double oneOverPersistence = 1 / config.persistence;
+    // double oneOverPersistence = 1 / config.persistence;
 
     // integral of a^x from b to c = (a^(c) - a^(b)) / log(a)
-    return config.levelDisplacement * (std::pow(config.persistence, level + depth) - std::pow(config.persistence, level)) / std::log(config.persistence);
+    // return config.levelDisplacement * (std::pow(config.persistence, level + depth) - std::pow(config.persistence, level)) / std::log(config.persistence);
+    return config.levelDisplacement * -std::pow(config.persistence, level + depth) / std::log(config.persistence);
 }
 
 char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int index, size_t &length) const {
