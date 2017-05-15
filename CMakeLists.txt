@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 project(paracosm)
 
@@ -18,6 +18,10 @@ file(GLOB SOURCE_FILES
     "src/noise/*.h"
 )
 
+if (UNIX AND NOT APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif()
+
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
 # Gives our library file a .node extension without any "lib" prefix
@@ -31,17 +35,27 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
 # You should add this line in every CMake.js based project
 target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
 
+if (WIN32)
+    set(prefix "")
+    set(suffix ".lib")
+elseif(APPLE)
+    set(prefix "lib")
+    set(suffix ".a")
+else()
+    set(prefix "lib")
+    set(suffix ".a")
+endif()
+
 ExternalProject_Add(jsoncpp
-    GIT_REPOSITORY git@github.com:open-source-parsers/jsoncpp.git
+    GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
     GIT_TAG d7347a2623707d71f8b21b18a46a1281ab79d45c
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
 )
-
 ExternalProject_Get_Property(jsoncpp install_dir)
 include_directories(${install_dir}/include)
+target_link_libraries(${PROJECT_NAME} ${install_dir}/lib/${prefix}jsoncpp${suffix})
 add_dependencies(${PROJECT_NAME} jsoncpp)
-target_link_libraries(${PROJECT_NAME} ${install_dir}/lib/jsoncpp.lib)
 
 ExternalProject_Add(glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -49,7 +63,6 @@ ExternalProject_Add(glm
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/glm
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
 )
-
 ExternalProject_Get_Property(glm install_dir)
 include_directories(${install_dir}/include)
 add_dependencies(${PROJECT_NAME} glm)

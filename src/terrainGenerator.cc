@@ -1,8 +1,9 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <cstring>
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -272,8 +273,8 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
     terrain["accessors"]["accessor_pos"]["max"][2] = maxPosition[2];
 
     terrain["accessors"]["accessor_pos"]["byteOffset"] = 0;
-    terrain["accessors"]["accessor_nor"]["byteOffset"] = 3 * sizeof(float) * vertexCount;
-    terrain["accessors"]["accessor_uv"]["byteOffset"] = (3 + 3) * sizeof(float) * vertexCount;
+    terrain["accessors"]["accessor_nor"]["byteOffset"] = (unsigned int)(3 * sizeof(float) * vertexCount);
+    terrain["accessors"]["accessor_uv"]["byteOffset"] = (unsigned int)((3 + 3) * sizeof(float) * vertexCount);
 
     terrain["bufferViews"]["bufferView_ind"]["byteLength"] = indicesSize;
     terrain["bufferViews"]["bufferViews_attr"]["byteLength"] = positionsSize + normalsSize + uvsSize;
@@ -301,7 +302,7 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
     length = b3dmHeaderLength + featureTableLength + batchTableLength + glbLength;
     char* data = new char[length];
 
-    memcpy(data, "b3dm", 4);
+    std::memcpy(data, "b3dm", 4);
     *(uint32_t*)(data + 4*1) = 1;
     *(uint32_t*)(data + 4*2) = (uint32_t) length;
     *(uint32_t*)(data + 4*3) = featureTableJsonLength;
@@ -311,15 +312,15 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
 
     char* glb = data + b3dmHeaderLength + featureTableLength + batchTableLength;
 
-    memcpy(glb, "glTF", 4);
+    std::memcpy(glb, "glTF", 4);
     *(uint32_t*)(glb + 4*1) = 1;
     *(uint32_t*)(glb + 4*2) = glbLength;
     *(uint32_t*)(glb + 4*3) = contentLength;
     *(uint32_t*)(glb + 4*4) = 0; // contentFormat
-    memcpy(glb + 4*5, json.c_str(), jsonLength);
-    memset(glb + 4*5 + jsonLength, ' ', contentLength - jsonLength); // fill the padding with spaces
+    std::memcpy(glb + 4*5, json.c_str(), jsonLength);
+    std::memset(glb + 4*5 + jsonLength, ' ', contentLength - jsonLength); // fill the padding with spaces
     
-    memcpy(glb + gltfHeaderLength + contentLength, glbBuffer, bufferLength);
+    std::memcpy(glb + gltfHeaderLength + contentLength, glbBuffer, bufferLength);
     delete glbBuffer;
 
     return data;
