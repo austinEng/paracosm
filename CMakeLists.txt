@@ -26,6 +26,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
 # Gives our library file a .node extension without any "lib" prefix
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+set_target_properties(${PROJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Essential include files to build a node addon,
 # You should add this line in every CMake.js based project
@@ -50,7 +51,7 @@ ExternalProject_Add(jsoncpp
     GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
     GIT_TAG d7347a2623707d71f8b21b18a46a1281ab79d45c
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=true
 )
 ExternalProject_Get_Property(jsoncpp install_dir)
 include_directories(${install_dir}/include)
