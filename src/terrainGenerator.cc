@@ -9,6 +9,7 @@
 #include <vector>
 #include <iostream>
 #include "terrainGenerator.h"
+#include "cartographic.h"
 
 namespace paracosm {
 
@@ -21,7 +22,8 @@ void TerrainGenerator::Config::computeProperties() {
     levelDisplacement = -maximumDisplacement / std::log(persistence);
 }
 
-TerrainGenerator::TerrainGenerator(const Config &config) : config(config) {
+TerrainGenerator::TerrainGenerator(const Config &config) : 
+    config(config) {
 
     Json::Reader reader;
 
@@ -80,7 +82,7 @@ BoundingRegion TerrainGenerator::getBoundingTile(Hemisphere hemisphere, unsigned
     return region;
 }
 
-BoundingRegion TerrainGenerator::generateBoundingRegion(Hemisphere hemisphere, unsigned int index, double &terrainError) const {
+BoundingRegion TerrainGenerator::generateBoundingRegion(Hemisphere hemisphere, unsigned int index) const {
     unsigned int depth;
     BoundingRegion region = getBoundingTile(hemisphere, index, depth);
 
@@ -88,10 +90,10 @@ BoundingRegion TerrainGenerator::generateBoundingRegion(Hemisphere hemisphere, u
     double nw = sampleHeight(region.w, region.n, depth);
     double se = sampleHeight(region.e, region.s, depth);
     double ne = sampleHeight(region.e, region.n, depth);
-    terrainError = calculateTerrainError(depth, config.contentGenerationDepth);
+    double error = calculateErrorDifference(depth, depth + config.contentGenerationDepth);
     
-    region.h1 = std::min(std::min(sw, nw), std::min(se, ne)) - terrainError;
-    region.h2 = std::max(std::max(sw, nw), std::max(se, ne)) + terrainError;
+    region.h1 = std::min(std::min(sw, nw), std::min(se, ne)) - error;
+    region.h2 = std::max(std::max(sw, nw), std::max(se, ne)) + error;
     
     return region;
 }
@@ -105,69 +107,66 @@ unsigned int TerrainGenerator::getDepth(unsigned int index) const {
     return depth;
 }
 
-double TerrainGenerator::sampleHeight(double longitude, double latitude, unsigned int level) const {
-    return 0;
+template <typename A, typename B, typename C, typename D>
+void cartographicToCartesian(const Cartographic<A> &cartographic, const glm::tvec3<B> &ellipsoid, glm::tvec3<C> &cartesian, glm::tvec3<D> &normal) {
+    double cosLatitude = std::cos(cartographic.latitude);
+    normal.x = (D) cosLatitude * std::cos(cartographic.longitude);
+    normal.y = (D) cosLatitude * std::sin(cartographic.longitude);
+    normal.z = (D) std::sin(cartographic.latitude);
+    normal = glm::normalize(normal);
+
+    glm::tvec3<D> k(
+        normal.x * ellipsoid.x * ellipsoid.x,
+        normal.y * ellipsoid.y * ellipsoid.y,
+        normal.z * ellipsoid.z * ellipsoid.z
+    );
+
+    double gamma = std::sqrt(glm::dot(normal, k));
+    k /= gamma;
+
+    cartesian.x = normal.x * cartographic.height + k.x;
+    cartesian.y = normal.y * cartographic.height + k.y;
+    cartesian.z = normal.z * cartographic.height + k.z;
 }
 
-template <typename A, typename B, typename C, typename D>
-void cartographicToCartesian(A cartographic[3], B ellipsoid[3], C cartesian[3], D normal[3]) {
-    double cosLatitude = std::cos(cartographic[1]);
-    double nx = cosLatitude * std::cos(cartographic[0]);
-    double ny = cosLatitude * std::sin(cartographic[0]);
-    double nz = std::sin(cartographic[1]);
-    double length = std::sqrt(nx*nx + ny*ny + nz*nz);
-    nx /= length;
-    ny /= length;
-    nz /= length;
+double TerrainGenerator::sampleHeight(double longitude, double latitude, unsigned int level) const {
+    Cartographic<double> cartographic(longitude, latitude, 0);
+    glm::dvec3 point;
+    static glm::dvec3 scratchNormal;
+    static glm::dvec3 ellipsoid(0.5, 0.5, 0.5);
 
-    normal[0] = (D) nx;
-    normal[1] = (D) ny;
-    normal[2] = (D) nz;
+    cartographicToCartesian(cartographic, ellipsoid, point, scratchNormal);
 
-    double kx = nx * ellipsoid[0] * ellipsoid[0];
-    double ky = ny * ellipsoid[1] * ellipsoid[1];
-    double kz = nz * ellipsoid[2] * ellipsoid[2];
-
-    double gamma = std::sqrt(nx * kx + ny * ky + nz * kz);
-    kx /= gamma;
-    ky /= gamma;
-    kz /= gamma;
-
-    nx *= cartographic[2];
-    ny *= cartographic[2];
-    nz *= cartographic[2];
-
-    cartesian[0] = (A) (nx + kx);
-    cartesian[1] = (A) (ny + ky);
-    cartesian[2] = (A) (nz + kz);
+    noise::MultiOctaveValueNoise<3, double> noiseGenerator(noise::MultiOctaveValueNoise<3, double>::Config(1, 1, config.persistence));
+    return config.levelDisplacement * noiseGenerator.sample(&point[0], level);
 }
 
 double TerrainGenerator::calculateRegionError(const BoundingRegion &region) const {
-    double cartographic[3] = {0,0,0};
-    double cartesian[3];
-    double normal[3];
+    Cartographic<double> cartographic(0, 0, 0);
+    glm::dvec3 cartesian;
+    glm::dvec3 normal;
 
     double radius = 0;
 
-    cartographic[0] = region.w;
-    cartographic[1] = region.s;
+    cartographic.longitude = region.w;
+    cartographic.latitude = region.s;
     cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
-    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+    radius += glm::length(cartesian);
 
-    cartographic[0] = region.e;
-    cartographic[1] = region.s;
+    cartographic.longitude = region.e;
+    cartographic.latitude = region.s;
     cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
-    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+    radius += glm::length(cartesian);
 
-    cartographic[0] = region.w;
-    cartographic[1] = region.n;
+    cartographic.longitude = region.w;
+    cartographic.latitude = region.n;
     cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
-    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+    radius += glm::length(cartesian);
 
-    cartographic[0] = region.e;
-    cartographic[1] = region.n;
+    cartographic.longitude = region.e;
+    cartographic.latitude = region.n;
     cartographicToCartesian(cartographic, config.ellipsoid, cartesian, normal);
-    radius += std::sqrt(cartesian[0] * cartesian[0] + cartesian[1] * cartesian[1] + cartesian[2] * cartesian[2]);
+    radius += glm::length(cartesian);
 
     radius /= 4;
 
@@ -180,11 +179,13 @@ double TerrainGenerator::calculateRegionError(const BoundingRegion &region) cons
     return chordError;
 }
 
-double TerrainGenerator::calculateTerrainError(unsigned int level, unsigned int depth) const {
-    double oneOverPersistence = 1 / config.persistence;
-
+double TerrainGenerator::calculateErrorDifference(unsigned int levelA, unsigned int levelB) const {
     // integral of a^x from b to c = (a^(c) - a^(b)) / log(a)
-    return config.levelDisplacement * (std::pow(config.persistence, level + depth) - std::pow(config.persistence, level)) / std::log(config.persistence);
+    return config.levelDisplacement * (std::pow(config.persistence, levelB) - std::pow(config.persistence, levelA)) / std::log(config.persistence);
+}
+
+double TerrainGenerator::calculateRemainingError(unsigned int level) const {
+    return config.levelDisplacement * -std::pow(config.persistence, level) / std::log(config.persistence);
 }
 
 char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int index, size_t &length) const {
@@ -213,33 +214,27 @@ char* TerrainGenerator::generateTerrain(Hemisphere hemisphere, unsigned int inde
     float* normals = (float*) (glbBuffer + normalsOffset);
     float* uvs = (float*) (glbBuffer + uvsOffset);
 
-    float minPosition[3];
-    float maxPosition[3];
+    glm::vec3 minPosition;
+    glm::vec3 maxPosition;
     unsigned int idx = 0;
     for (unsigned int i = 0; i <= steps; ++i) {
         double longitude = region.w + (i * step) * (region.e - region.w);
         for (unsigned int j = 0; j <= steps; ++j) {
             double latitude = region.s + (j * step) * (region.n - region.s);
-            double height = sampleHeight(longitude, latitude, depth);
+            double height = sampleHeight(longitude, latitude, depth + config.contentGenerationDepth);
             
-            double cartographic[3] = {longitude, latitude, height};
+            Cartographic<double> cartographic(longitude, latitude, height);
             
-            cartographicToCartesian(cartographic, config.ellipsoid, positions + 3*idx, normals + 3*idx);
+            glm::vec3& position = *(glm::vec3*)(positions + 3*idx);
+            glm::vec3& normal = *(glm::vec3*)(normals + 3*idx);
+            cartographicToCartesian(cartographic, config.ellipsoid, position, normal);
 
             if (i == 0 && j == 0) {
-                minPosition[0] = positions[3*idx + 0];
-                minPosition[1] = positions[3*idx + 1];
-                minPosition[2] = positions[3*idx + 2];
-                maxPosition[0] = positions[3*idx + 0];
-                maxPosition[1] = positions[3*idx + 1];
-                maxPosition[2] = positions[3*idx + 2];
+                minPosition = position;
+                maxPosition = position;
             } else {
-                minPosition[0] = std::min(minPosition[0], positions[3*idx + 0]);
-                minPosition[1] = std::min(minPosition[1], positions[3*idx + 1]);
-                minPosition[2] = std::min(minPosition[2], positions[3*idx + 2]);
-                maxPosition[0] = std::max(maxPosition[0], positions[3*idx + 0]);
-                maxPosition[1] = std::max(maxPosition[1], positions[3*idx + 1]);
-                maxPosition[2] = std::max(maxPosition[2], positions[3*idx + 2]);
+                minPosition = glm::min(minPosition, position);
+                maxPosition = glm::max(maxPosition, position);
             }
 
             uvs[2*idx + 0] = (float) i / steps;

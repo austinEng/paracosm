@@ -35,13 +35,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
 # You should add this line in every CMake.js based project
 target_link_libraries(${PROJECT_NAME} ${CMAKE_JS_LIB})
 
-ExternalProject_Add(jsoncpp
-    GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
-)
-ExternalProject_Get_Property(jsoncpp install_dir)
-include_directories(${install_dir}/include)
 if (WIN32)
     set(prefix "")
     set(suffix ".lib")
@@ -52,5 +45,24 @@ else()
     set(prefix "lib")
     set(suffix ".a")
 endif()
+
+ExternalProject_Add(jsoncpp
+    GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
+    GIT_TAG d7347a2623707d71f8b21b18a46a1281ab79d45c
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/jsoncpp
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
+)
+ExternalProject_Get_Property(jsoncpp install_dir)
+include_directories(${install_dir}/include)
 target_link_libraries(${PROJECT_NAME} ${install_dir}/lib/${prefix}jsoncpp${suffix})
 add_dependencies(${PROJECT_NAME} jsoncpp)
+
+ExternalProject_Add(glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG 40398d67cd3e4f74b08649eda428dc411d801fd5
+    PREFIX ${CMAKE_CURRENT_BINARY_DIR}/glm
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR> -DCMAKE_BUILD_TYPE=Release
+)
+ExternalProject_Get_Property(glm install_dir)
+include_directories(${install_dir}/include)
+add_dependencies(${PROJECT_NAME} glm)

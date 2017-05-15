@@ -107,8 +107,7 @@ private:
 
         v8::Handle<v8::Object> boundingVolume = v8::Object::New(isolate);
         v8::Handle<v8::Array> region = v8::Array::New(isolate, 6);
-        double terrainError;
-        BoundingRegion boundingRegion = generator.generateBoundingRegion(hemisphere, index, terrainError);
+        BoundingRegion boundingRegion = generator.generateBoundingRegion(hemisphere, index);
         region->Set(0, v8::Number::New(isolate, boundingRegion.w));
         region->Set(1, v8::Number::New(isolate, boundingRegion.s));
         region->Set(2, v8::Number::New(isolate, boundingRegion.e));
@@ -119,6 +118,7 @@ private:
         node->Set(v8::String::NewFromUtf8(isolate, "boundingVolume"), boundingVolume);
 
         double error = generator.calculateRegionError(boundingRegion);
+        double terrainError = generator.calculateRemainingError(depth + generator.config.contentGenerationDepth);
         node->Set(v8::String::NewFromUtf8(isolate, "geometricError"), v8::Number::New(isolate, error + terrainError));
         node->Set(v8::String::NewFromUtf8(isolate, "refine"), v8::String::NewFromUtf8(isolate, "replace"));
 
@@ -153,8 +153,7 @@ private:
         Hemisphere hemisphere = (Hemisphere)(int) params->Get(v8::String::NewFromUtf8(isolate, "hemisphere"))->NumberValue();
         unsigned int index = (unsigned int) params->Get(v8::String::NewFromUtf8(isolate, "index"))->NumberValue();
         
-        double error;
-        BoundingRegion boundingRegion = obj->generator.generateBoundingRegion(hemisphere, index, error);
+        BoundingRegion boundingRegion = obj->generator.generateBoundingRegion(hemisphere, index);
         v8::Handle<v8::Array> region = v8::Array::New(isolate, 6);
         region->Set(0, v8::Number::New(isolate, boundingRegion.w));
         region->Set(1, v8::Number::New(isolate, boundingRegion.s));

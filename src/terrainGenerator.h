@@ -2,6 +2,8 @@
 #pragma once
 
 #include <json/json.h>
+#include <glm/glm.hpp>
+#include "noise/multiOctaveValueNoise.h"
 
 namespace paracosm {
 
@@ -31,19 +33,20 @@ public:
         double levelDisplacement;
         unsigned int generationDepth;
         unsigned int contentGenerationDepth;
-        double ellipsoid[3];
+        glm::dvec3 ellipsoid;
 
         void computeProperties();
     };
 
     const Config config;
+    // const noise::MultiOctaveValueNoise<2, double> noiseGenerator;
 
     TerrainGenerator(const Config &config);
     ~TerrainGenerator();
 
     BoundingRegion getBoundingTile(Hemisphere, unsigned int index, unsigned int &depth) const;
 
-    BoundingRegion generateBoundingRegion(Hemisphere hemisphere, unsigned int index, double &terrainError) const;
+    BoundingRegion generateBoundingRegion(Hemisphere hemisphere, unsigned int index) const;
 
     unsigned int getDepth(unsigned int index) const;
 
@@ -51,7 +54,9 @@ public:
 
     double calculateRegionError(const BoundingRegion &region) const;
 
-    double calculateTerrainError(unsigned int level, unsigned int depth) const;
+    double calculateErrorDifference(unsigned int levelA, unsigned int levelB) const;
+
+    double calculateRemainingError(unsigned int level) const;
 
     char* generateTerrain(Hemisphere hemisphere, unsigned int index, size_t &length) const;
 

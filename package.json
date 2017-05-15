@@ -6,10 +6,11 @@
     "node": "6.x"
   },
   "scripts": {
-    "start": "nodemon server.js --ignore example/",
+    "start": "nodemon server.js --ignore demo/",
     "serve": "node server.js",
     "postinstall": "npm run compile && npm run buildCesium",
     "buildCesium": "cd cesium && npm install && npm run combine",
+    "configure": "cmake-js configure",
     "build": "cmake-js build -D",
     "compile": "cmake-js compile"
   },
